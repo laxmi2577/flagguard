@@ -1,0 +1,34 @@
+{
+    "flags": [
+        {
+            "name": "feature_login_v2",
+            "enabled": true,
+            "type": "boolean",
+            "description": "New login experience"
+        },
+        {
+            "name": "feature_dashboard_v2",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Redesigned dashboard",
+            "dependencies": [
+                "feature_login_v2"
+            ]
+        },
+        {
+            "name": "feature_analytics",
+            "enabled": false,
+            "type": "boolean",
+            "description": "Analytics dashboard"
+        },
+        {
+            "name": "feature_export",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Export functionality",
+            "dependencies": [
+                "feature_analytics"
+            ]
+        }
+    ]
+}

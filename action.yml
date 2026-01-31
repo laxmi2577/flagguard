@@ -1,0 +1,90 @@
+name: FlagGuard
+description: Analyze feature flags for conflicts and dead code
+author: FlagGuard Team
+
+branding:
+  icon: 'flag'
+  color: 'blue'
+
+inputs:
+  config-path:
+    description: 'Path to flag configuration file'
+    required: true
+  source-path:
+    description: 'Path to source code directory'
+    required: true
+  fail-on-conflict:
+    description: 'Fail if conflicts are found'
+    required: false
+    default: 'true'
+  output-format:
+    description: 'Output format (text, json, markdown)'
+    required: false
+    default: 'text'
+  use-llm:
+    description: 'Use LLM for explanations (requires Ollama)'
+    required: false
+    default: 'false'
+
+outputs:
+  conflicts-found:
+    description: 'Number of conflicts found'
+    value: ${{ steps.analyze.outputs.conflicts }}
+  dead-code-blocks:
+    description: 'Number of dead code blocks found'
+    value: ${{ steps.analyze.outputs.dead_code }}
+  status:
+    description: 'Analysis status (pass/fail)'
+    value: ${{ steps.analyze.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install FlagGuard
+      shell: bash
+      run: pip install flagguard
+    
+    - name: Run Analysis
+      id: analyze
+      shell: bash
+      run: |
+        # Run FlagGuard analysis
+        OUTPUT=$(flagguard analyze \
+          --config "${{ inputs.config-path }}" \
+          --source "${{ inputs.source-path }}" \
+          --format "${{ inputs.output-format }}" \
+          ${{ inputs.use-llm == 'true' && '' || '--no-llm' }} \
+          2>&1) || true
+        
+        echo "$OUTPUT"
+        
+        # Parse results
+        CONFLICTS=$(echo "$OUTPUT" | grep -oP 'Conflicts found: \K\d+' || echo "0")
+        DEAD_CODE=$(echo "$OUTPUT" | grep -oP 'Dead code blocks: \K\d+' || echo "0")
+        
+        echo "conflicts=$CONFLICTS" >> $GITHUB_OUTPUT
+        echo "dead_code=$DEAD_CODE" >> $GITHUB_OUTPUT
+        
+        if [ "$CONFLICTS" -gt 0 ] && [ "${{ inputs.fail-on-conflict }}" == "true" ]; then
+          echo "status=fail" >> $GITHUB_OUTPUT
+          exit 1
+        else
+          echo "status=pass" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create Summary
+      shell: bash
+      if: always()
+      run: |
+        echo "## 🚩 FlagGuard Analysis Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Conflicts | ${{ steps.analyze.outputs.conflicts }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Dead Code Blocks | ${{ steps.analyze.outputs.dead_code }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Status | ${{ steps.analyze.outputs.status }} |" >> $GITHUB_STEP_SUMMARY

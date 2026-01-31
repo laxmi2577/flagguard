@@ -5,8 +5,10 @@ from flagguard.core.models import (
     ConflictSeverity,
     DeadCodeBlock,
     FlagDefinition,
+    FlagDependency,
     FlagType,
     FlagUsage,
+    FlagUsageDatabase,
     FlagVariation,
     TargetingRule,
 )
@@ -17,10 +19,13 @@ __all__ = [
     "ConflictSeverity",
     "DeadCodeBlock",
     "FlagDefinition",
+    "FlagDependency",
     "FlagType",
     "FlagUsage",
+    "FlagUsageDatabase",
     "FlagVariation",
     "TargetingRule",
     "get_logger",
     "setup_logging",
 ]
+

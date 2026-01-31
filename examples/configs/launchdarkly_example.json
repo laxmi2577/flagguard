@@ -1,0 +1,57 @@
+{
+  "flags": {
+    "new_checkout_flow": {
+      "key": "new_checkout_flow",
+      "on": true,
+      "description": "New checkout experience with enhanced UI",
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "prerequisites": [
+        {"key": "payment_gateway_enabled"}
+      ],
+      "tags": ["checkout", "ui", "2024-release"]
+    },
+    "payment_gateway_enabled": {
+      "key": "payment_gateway_enabled",
+      "on": false,
+      "description": "Enable the new payment gateway integration",
+      "variations": [true, false],
+      "fallthrough": {"variation": 1},
+      "tags": ["payments", "infrastructure"]
+    },
+    "premium_subscription_tier": {
+      "key": "premium_subscription_tier",
+      "on": true,
+      "description": "Premium subscription features",
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "prerequisites": [
+        {"key": "payment_gateway_enabled"}
+      ],
+      "tags": ["subscription", "premium"]
+    },
+    "dark_mode_enabled": {
+      "key": "dark_mode_enabled",
+      "on": true,
+      "description": "Dark mode UI toggle",
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "tags": ["ui", "theme"]
+    },
+    "ab_test_homepage": {
+      "key": "ab_test_homepage",
+      "on": true,
+      "description": "A/B test for homepage redesign",
+      "variations": ["control", "variant_a", "variant_b"],
+      "fallthrough": {"variation": 0},
+      "rules": [
+        {
+          "name": "beta_users",
+          "rolloutPercentage": 50,
+          "variation": 1
+        }
+      ],
+      "tags": ["ab-test", "homepage"]
+    }
+  }
+}
