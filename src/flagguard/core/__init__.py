@@ -13,6 +13,7 @@ from flagguard.core.models import (
     TargetingRule,
 )
 from flagguard.core.logging import get_logger, setup_logging
+from flagguard.core.orchestrator import FlagGuardAnalyzer
 
 __all__ = [
     "Conflict",
@@ -27,5 +28,7 @@ __all__ = [
     "TargetingRule",
     "get_logger",
     "setup_logging",
+    "FlagGuardAnalyzer",
 ]
+
 
