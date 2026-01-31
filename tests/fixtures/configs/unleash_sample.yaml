@@ -1,0 +1,45 @@
+version: 1
+features:
+  - name: new_checkout_flow
+    enabled: true
+    description: "New checkout flow with enhanced UI"
+    strategies:
+      - name: default
+      - name: userWithId
+        parameters:
+          userIds: "user1,user2,user3"
+    variants:
+      - name: control
+        weight: 50
+      - name: treatment
+        weight: 50
+
+  - name: payment_gateway
+    enabled: false
+    description: "Payment gateway integration"
+    strategies:
+      - name: default
+    
+  - name: premium_features
+    enabled: true
+    description: "Premium subscription features"
+    strategies:
+      - name: gradualRolloutUserId
+        parameters:
+          percentage: 30
+          groupId: premium_rollout
+
+  - name: dark_mode
+    enabled: true
+    description: "Dark mode UI theme"
+    strategies:
+      - name: default
+
+  - name: analytics_v2
+    enabled: true
+    description: "New analytics dashboard"
+    strategies:
+      - name: flexibleRollout
+        parameters:
+          rollout: 100
+          stickiness: userId

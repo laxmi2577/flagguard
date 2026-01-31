@@ -1,0 +1,49 @@
+{
+  "flags": {
+    "new_checkout": {
+      "key": "new_checkout",
+      "on": true,
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "offVariation": 1,
+      "prerequisites": [
+        {"key": "payment_enabled", "variation": 0}
+      ],
+      "description": "Enable new checkout flow",
+      "tags": ["checkout", "v2"]
+    },
+    "payment_enabled": {
+      "key": "payment_enabled",
+      "on": false,
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "offVariation": 1,
+      "description": "Enable payment processing"
+    },
+    "premium_tier": {
+      "key": "premium_tier",
+      "on": true,
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "prerequisites": [
+        {"key": "payment_enabled", "variation": 0}
+      ]
+    },
+    "ab_test_homepage": {
+      "key": "ab_test_homepage",
+      "on": true,
+      "variations": ["control", "variant_a", "variant_b"],
+      "fallthrough": {"variation": 0},
+      "rules": [
+        {
+          "id": "beta_users",
+          "clauses": [
+            {"attribute": "user_group", "op": "in", "values": ["beta"]}
+          ],
+          "variation": 1,
+          "rolloutPercentage": 50
+        }
+      ]
+    }
+  }
+}

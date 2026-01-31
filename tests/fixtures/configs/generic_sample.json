@@ -1,0 +1,50 @@
+{
+    "flags": [
+        {
+            "name": "feature_login_v2",
+            "enabled": true,
+            "type": "boolean",
+            "description": "New login experience"
+        },
+        {
+            "name": "feature_dashboard_v2",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Redesigned dashboard",
+            "dependencies": [
+                "feature_login_v2"
+            ]
+        },
+        {
+            "name": "feature_analytics",
+            "enabled": false,
+            "type": "boolean",
+            "description": "Analytics dashboard"
+        },
+        {
+            "name": "feature_export",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Data export functionality",
+            "dependencies": [
+                "feature_analytics"
+            ],
+            "tags": [
+                "export",
+                "data"
+            ]
+        },
+        {
+            "name": "premium_checkout",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Premium checkout flow"
+        },
+        {
+            "name": "dark_mode_enabled",
+            "enabled": true,
+            "type": "boolean",
+            "description": "Dark mode UI toggle"
+        }
+    ]
+}
