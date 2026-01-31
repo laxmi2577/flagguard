@@ -247,6 +247,146 @@ def check_llm() -> None:
         console.print("  Install from: https://ollama.ai")
 
 
+@cli.command()
+def init() -> None:
+    """Initialize FlagGuard in current directory.
+    
+    Creates a .flagguard.yaml configuration file with sensible defaults.
+    
+    Example:
+        flagguard init
+    """
+    config_content = """# FlagGuard Configuration
+# This file configures FlagGuard for your project.
+
+# Format of your flag configuration files
+config_format: auto  # auto, launchdarkly, unleash, generic
+
+# Paths to scan for source code
+source_paths:
+  - ./src
+  - ./app
+
+# Patterns to exclude from scanning
+exclude_patterns:
+  - node_modules
+  - .venv
+  - __pycache__
+  - "*.test.*"
+  - "*.spec.*"
+  - dist
+  - build
+
+# LLM configuration for AI-powered explanations
+llm:
+  enabled: true
+  model: gemma2:2b
+  host: http://localhost:11434
+  temperature: 0.3
+
+# Analysis settings
+analysis:
+  max_flags: 100
+  max_conflicts: 100
+  detect_dead_code: true
+  detect_cycles: true
+
+# Reporting options
+reporting:
+  format: markdown
+  include_executive_summary: true
+  include_dependency_graph: true
+"""
+    
+    config_path = Path(".flagguard.yaml")
+    
+    if config_path.exists():
+        console.print("[yellow]⚠ .flagguard.yaml already exists[/yellow]")
+        if not click.confirm("Overwrite?"):
+            console.print("Aborted.")
+            return
+    
+    config_path.write_text(config_content, encoding="utf-8")
+    console.print("[green]✓ Created .flagguard.yaml[/green]")
+    console.print("\nNext steps:")
+    console.print("  1. Edit .flagguard.yaml to match your project")
+    console.print("  2. Run: flagguard analyze -c flags.json -s ./src")
+
+
+@cli.command()
+@click.argument("conflict_id")
+@click.option(
+    "--config", "-c",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to flag configuration file",
+)
+@click.option(
+    "--source", "-s",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to source code directory",
+)
+def explain(conflict_id: str, config: Path, source: Path) -> None:
+    """Get detailed explanation for a specific conflict.
+    
+    Runs analysis and provides in-depth explanation for the specified
+    conflict ID using the LLM.
+    
+    Example:
+        flagguard explain C001 -c flags.json -s ./src
+    """
+    from flagguard.parsers import parse_config
+    from flagguard.parsers.ast import SourceScanner
+    from flagguard.analysis import FlagSATSolver, ConflictDetector
+    from flagguard.llm import OllamaClient, ExplanationEngine
+    
+    # Run analysis
+    with console.status("[bold green]Analyzing..."):
+        flags = parse_config(config)
+        scanner = SourceScanner()
+        usages = scanner.scan_directory(source)
+        
+        solver = FlagSATSolver()
+        detector = ConflictDetector(solver)
+        detector.load_flags(flags)
+        conflicts = detector.detect_all_conflicts()
+    
+    # Find the specific conflict
+    conflict = next(
+        (c for c in conflicts if c.conflict_id == conflict_id),
+        None
+    )
+    
+    if not conflict:
+        console.print(f"[red]✗ Conflict '{conflict_id}' not found[/red]")
+        console.print("\nAvailable conflicts:")
+        for c in conflicts[:10]:
+            console.print(f"  - {c.conflict_id}: {c.reason[:50]}...")
+        return
+    
+    # Display conflict details
+    console.print(Panel.fit(
+        f"[bold]Conflict: {conflict.conflict_id}[/bold]",
+        subtitle=f"Severity: {conflict.severity.value}",
+    ))
+    console.print(f"\n[cyan]Flags involved:[/cyan] {', '.join(conflict.flags_involved)}")
+    console.print(f"[cyan]Conflicting values:[/cyan] {conflict.conflicting_values}")
+    console.print(f"[cyan]Reason:[/cyan] {conflict.reason}")
+    
+    # Generate LLM explanation
+    client = OllamaClient()
+    if client.is_available:
+        with console.status("[bold green]Generating explanation..."):
+            engine = ExplanationEngine(client)
+            explanation = engine.explain_conflict(conflict)
+        
+        console.print("\n[bold yellow]AI Explanation:[/bold yellow]")
+        console.print(Panel(explanation, border_style="yellow"))
+    else:
+        console.print("\n[yellow]⚠ Ollama not available. Install for AI explanations.[/yellow]")
+
+
 def _format_text_output(
     flags: list,
     conflicts: list,
@@ -284,3 +424,4 @@ def _format_text_output(
 
 if __name__ == "__main__":
     cli()
+
