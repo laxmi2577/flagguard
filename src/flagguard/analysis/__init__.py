@@ -11,6 +11,7 @@ from flagguard.analysis.z3_wrapper import FlagSATSolver
 from flagguard.analysis.conflict_detector import ConflictDetector
 from flagguard.analysis.dead_code import DeadCodeFinder
 from flagguard.analysis.path_analyzer import PathAnalyzer, CodePath
+from flagguard.analysis.constraint_encoder import ConstraintEncoder
 
 __all__ = [
     "FlagSATSolver",
@@ -18,5 +19,7 @@ __all__ = [
     "DeadCodeFinder",
     "PathAnalyzer",
     "CodePath",
+    "ConstraintEncoder",
 ]
+
 
