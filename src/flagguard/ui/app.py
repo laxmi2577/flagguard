@@ -1,106 +1,56 @@
 """Enhanced Gradio Web UI for FlagGuard.
 
 Provides a browser-based interface with:
-- Interactive Dependency Graph (Mermaid.js)
+- Interactive Dependency Graph (rendered Mermaid via iframe)
 - Real-time Analysis Progress
-- Dark/Light Theme Toggle
 """
 
 import time
 from pathlib import Path
 from typing import Any, Generator
+import base64
 
 import gradio as gr
 
 from flagguard import __version__
 
 
-# Custom CSS for theme and styling
+# Custom CSS for styling
 CUSTOM_CSS = """
-/* Theme variables */
-:root {
-    --primary-color: #6366f1;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --error-color: #ef4444;
-}
-
-/* Progress bar styling */
-.progress-container {
-    background: var(--background-fill-secondary);
-    border-radius: 8px;
-    padding: 16px;
-    margin: 10px 0;
-}
-
-.progress-bar {
-    height: 8px;
-    background: linear-gradient(90deg, var(--primary-color), #8b5cf6);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
 /* Status badges */
-.status-success { color: var(--success-color); font-weight: bold; }
-.status-warning { color: var(--warning-color); font-weight: bold; }
-.status-error { color: var(--error-color); font-weight: bold; }
+.status-success { color: #10b981; font-weight: bold; }
+.status-warning { color: #f59e0b; font-weight: bold; }
+.status-error { color: #ef4444; font-weight: bold; }
 
 /* Graph container */
-.mermaid-container {
-    background: var(--background-fill-primary);
-    border-radius: 8px;
-    padding: 20px;
-    min-height: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Card styling */
-.stat-card {
-    background: var(--background-fill-secondary);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
+.graph-frame {
+    width: 100%;
+    height: 500px;
     border: 1px solid var(--border-color-primary);
-}
-
-.stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
+    border-radius: 8px;
+    background: white;
 }
 """
 
-# Mermaid.js HTML template for interactive graph
-MERMAID_HTML_TEMPLATE = """
-<div id="mermaid-graph" class="mermaid-container">
-    <div class="mermaid">
-{mermaid_code}
+
+def generate_mermaid_iframe(mermaid_code: str) -> str:
+    """Generate an iframe that renders Mermaid diagram using mermaid.ink service."""
+    # Encode mermaid code for URL
+    encoded = base64.urlsafe_b64encode(mermaid_code.encode()).decode()
+    
+    # Use mermaid.ink to render the diagram
+    img_url = f"https://mermaid.ink/img/{encoded}?theme=default"
+    
+    html = f"""
+    <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px; min-height: 400px;">
+        <img src="{img_url}" alt="Dependency Graph" style="max-width: 100%; height: auto; border-radius: 4px;" 
+             onerror="this.onerror=null; this.parentElement.innerHTML='<p style=\\'color:#666;\\'>⚠️ Could not load graph. Copy the Mermaid code and paste it at <a href=\\'https://mermaid.live\\' target=\\'_blank\\'>mermaid.live</a></p>'"/>
+        <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+            🟢 Green = Enabled | 🔴 Red = Disabled | ⋯ Dotted = Conflict
+        </p>
     </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>
-    mermaid.initialize({{ 
-        startOnLoad: true,
-        theme: '{theme}',
-        flowchart: {{
-            useMaxWidth: true,
-            htmlLabels: true,
-            curve: 'basis'
-        }}
-    }});
-    mermaid.contentLoaded();
-</script>
-<div style="margin-top: 10px; text-align: center;">
-    <small>🖱️ Click nodes for details | 🔍 Zoom with scroll | ↔️ Drag to pan</small>
-</div>
-"""
+    """
+    return html
 
 
 def analyze_with_progress(
@@ -109,10 +59,7 @@ def analyze_with_progress(
     use_llm: bool,
     progress: gr.Progress = gr.Progress(),
 ) -> Generator[tuple[str, str, str, str], None, None]:
-    """Analyze with real-time progress updates.
-    
-    Yields progress updates during analysis.
-    """
+    """Analyze with real-time progress updates."""
     if config_file is None:
         yield "⚠️ Please upload a configuration file.", "", "", ""
         return
@@ -121,7 +68,7 @@ def analyze_with_progress(
         # Step 1: Loading
         progress(0.1, desc="📂 Loading configuration...")
         yield "📂 Loading configuration...", "", "", ""
-        time.sleep(0.3)
+        time.sleep(0.2)
         
         from flagguard.parsers import parse_config
         config_path = Path(config_file.name)
@@ -129,7 +76,7 @@ def analyze_with_progress(
         
         progress(0.3, desc=f"✓ Loaded {len(flags)} flags")
         yield f"✓ Loaded {len(flags)} flags", "", "", ""
-        time.sleep(0.2)
+        time.sleep(0.1)
         
         # Step 2: Analysis
         progress(0.5, desc="🔍 Detecting conflicts...")
@@ -142,8 +89,7 @@ def analyze_with_progress(
         conflicts = detector.detect_all_conflicts()
         
         progress(0.7, desc=f"✓ Found {len(conflicts)} conflicts")
-        yield f"✓ Loaded {len(flags)} flags\n✓ Found {len(conflicts)} conflicts", "", "", ""
-        time.sleep(0.2)
+        time.sleep(0.1)
         
         # Step 3: LLM (optional)
         executive_summary = ""
@@ -175,17 +121,20 @@ def analyze_with_progress(
         graph_lines = ["flowchart TD"]
         for flag in flags:
             style = ":::enabled" if flag.enabled else ":::disabled"
-            label = f"{flag.name}"
-            graph_lines.append(f'    {flag.name}["{label}"]{style}')
+            # Sanitize flag name for Mermaid
+            safe_name = flag.name.replace("-", "_").replace(".", "_")
+            label = flag.name
+            graph_lines.append(f'    {safe_name}["{label}"]{style}')
             for dep in flag.dependencies:
-                graph_lines.append(f"    {flag.name} --> {dep}")
+                safe_dep = dep.replace("-", "_").replace(".", "_")
+                graph_lines.append(f"    {safe_name} --> {safe_dep}")
         
         # Add conflict edges
         for conflict in conflicts:
             if len(conflict.flags_involved) >= 2:
-                graph_lines.append(
-                    f"    {conflict.flags_involved[0]} -.->|conflict| {conflict.flags_involved[1]}"
-                )
+                f1 = conflict.flags_involved[0].replace("-", "_").replace(".", "_")
+                f2 = conflict.flags_involved[1].replace("-", "_").replace(".", "_")
+                graph_lines.append(f"    {f1} -.->|⚠️| {f2}")
         
         graph_lines.extend([
             "",
@@ -194,11 +143,8 @@ def analyze_with_progress(
         ])
         mermaid_code = "\n".join(graph_lines)
         
-        # Create interactive HTML graph
-        interactive_graph = MERMAID_HTML_TEMPLATE.format(
-            mermaid_code=mermaid_code,
-            theme="default"
-        )
+        # Create rendered graph HTML
+        graph_html = generate_mermaid_iframe(mermaid_code)
         
         # Final summary
         progress(1.0, desc="✅ Analysis complete!")
@@ -216,45 +162,33 @@ def analyze_with_progress(
 | **Disabled Flags** | {sum(1 for f in flags if not f.enabled)} |
 """
         
-        yield summary, report, interactive_graph, mermaid_code
+        yield summary, report, graph_html, mermaid_code
         
     except Exception as e:
         yield f"❌ Error: {str(e)}", "", "", ""
 
 
 def create_app() -> gr.Blocks:
-    """Create the enhanced Gradio application."""
-    
-    # Theme options
-    light_theme = gr.themes.Soft(
-        primary_hue="indigo",
-        secondary_hue="purple",
-    )
+    """Create the Gradio application."""
     
     with gr.Blocks(
         title="FlagGuard - Feature Flag Analyzer",
-        theme=light_theme,
+        theme=gr.themes.Soft(
+            primary_hue="indigo",
+            secondary_hue="purple",
+        ),
         css=CUSTOM_CSS,
     ) as app:
         
-        # Header with theme toggle
-        with gr.Row():
-            with gr.Column(scale=4):
-                gr.Markdown(f"""
+        # Header
+        gr.Markdown(f"""
 # 🚩 FlagGuard <small style="opacity:0.7">v{__version__}</small>
 ### AI Feature Flag Conflict Analyzer
 
 Detect conflicts, impossible states, and dead code in your feature flags.
-                """)
-            with gr.Column(scale=1):
-                theme_toggle = gr.Radio(
-                    choices=["🌞 Light", "🌙 Dark"],
-                    value="🌞 Light",
-                    label="Theme",
-                    interactive=True,
-                )
-        
-        gr.Markdown("---")
+
+---
+        """)
         
         # Main content
         with gr.Row():
@@ -281,18 +215,12 @@ Detect conflicts, impossible states, and dead code in your feature flags.
                     variant="primary",
                     size="lg",
                 )
-                
-                # Progress display
-                progress_output = gr.Markdown(
-                    value="*Upload a file to begin*",
-                    label="Progress"
-                )
             
             # Right panel - Summary
             with gr.Column(scale=2):
                 gr.Markdown("### 📊 Results")
                 summary_output = gr.Markdown(
-                    value="*Analysis results will appear here*"
+                    value="*Upload a configuration file and click Analyze to begin*"
                 )
         
         # Tabs for detailed output
@@ -300,14 +228,11 @@ Detect conflicts, impossible states, and dead code in your feature flags.
             with gr.TabItem("📋 Detailed Report"):
                 report_output = gr.Markdown(label="Analysis Report")
             
-            with gr.TabItem("🔗 Interactive Graph"):
+            with gr.TabItem("🔗 Dependency Graph"):
                 gr.Markdown("""
-**Dependency Graph** - Visualize flag relationships
-- 🟢 **Green** = Enabled flags
-- 🔴 **Red** = Disabled flags  
-- **Dotted lines** = Conflicts
+**Visual Dependency Graph** - Shows relationships between flags
                 """)
-                graph_html = gr.HTML(label="Interactive Mermaid Graph")
+                graph_html = gr.HTML(label="Rendered Graph")
             
             with gr.TabItem("📝 Mermaid Code"):
                 gr.Markdown("Copy this code to [mermaid.live](https://mermaid.live) for editing:")
@@ -317,23 +242,12 @@ Detect conflicts, impossible states, and dead code in your feature flags.
                     lines=15,
                 )
         
-        # Connect analyze button with progress
+        # Connect analyze button
         analyze_btn.click(
             fn=analyze_with_progress,
             inputs=[config_input, source_input, use_llm_checkbox],
             outputs=[summary_output, report_output, graph_html, mermaid_code],
             show_progress="full",
-        )
-        
-        # Theme toggle handler (client-side)
-        def update_theme(choice):
-            # Note: Full theme switching requires page reload in Gradio
-            return f"Theme preference: {choice}"
-        
-        theme_toggle.change(
-            fn=update_theme,
-            inputs=[theme_toggle],
-            outputs=[progress_output],
         )
         
         # Footer
@@ -358,15 +272,8 @@ Made with ❤️ by Laxmi Ranjan
 def launch(
     share: bool = False,
     server_port: int = 7860,
-    dark_mode: bool = False,
 ) -> None:
-    """Launch the Gradio app.
-    
-    Args:
-        share: Whether to create a public link
-        server_port: Port to run the server on
-        dark_mode: Start in dark mode
-    """
+    """Launch the Gradio app."""
     app = create_app()
     app.launch(
         share=share,
