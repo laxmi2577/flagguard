@@ -1,0 +1,40 @@
+# FlagGuard Configuration
+# This file configures FlagGuard for your project.
+
+# Format of your flag configuration files
+config_format: auto  # auto, launchdarkly, unleash, generic
+
+# Paths to scan for source code
+source_paths:
+  - ./src
+  - ./app
+
+# Patterns to exclude from scanning
+exclude_patterns:
+  - node_modules
+  - .venv
+  - __pycache__
+  - "*.test.*"
+  - "*.spec.*"
+  - dist
+  - build
+
+# LLM configuration for AI-powered explanations
+llm:
+  enabled: true
+  model: gemma2:2b
+  host: http://localhost:11434
+  temperature: 0.3
+
+# Analysis settings
+analysis:
+  max_flags: 100
+  max_conflicts: 100
+  detect_dead_code: true
+  detect_cycles: true
+
+# Reporting options
+reporting:
+  format: markdown
+  include_executive_summary: true
+  include_dependency_graph: true

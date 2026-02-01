@@ -1,41 +1,41 @@
-name: FlagGuard
-description: Analyze feature flags for conflicts and dead code
-author: FlagGuard Team
-
+name: 'FlagGuard'
+description: 'Analyze feature flags for conflicts and dead code'
+author: 'FlagGuard Team'
 branding:
   icon: 'flag'
   color: 'blue'
 
 inputs:
   config-path:
-    description: 'Path to flag configuration file'
+    description: 'Path to feature flag configuration file'
     required: true
   source-path:
     description: 'Path to source code directory'
     required: true
-  fail-on-conflict:
-    description: 'Fail if conflicts are found'
+    default: '.'
+  fail-on-critical:
+    description: 'Fail the check if critical conflicts are found'
     required: false
     default: 'true'
   output-format:
-    description: 'Output format (text, json, markdown)'
+    description: 'Report format (markdown, json)'
     required: false
-    default: 'text'
-  use-llm:
-    description: 'Use LLM for explanations (requires Ollama)'
+    default: 'markdown'
+  max-conflicts:
+    description: 'Maximum conflicts to report'
     required: false
-    default: 'false'
+    default: '50'
 
 outputs:
   conflicts-found:
     description: 'Number of conflicts found'
-    value: ${{ steps.analyze.outputs.conflicts }}
-  dead-code-blocks:
-    description: 'Number of dead code blocks found'
-    value: ${{ steps.analyze.outputs.dead_code }}
-  status:
-    description: 'Analysis status (pass/fail)'
-    value: ${{ steps.analyze.outputs.status }}
+    value: ${{ steps.analyze.outputs.conflicts-found }}
+  critical-count:
+    description: 'Number of critical conflicts'
+    value: ${{ steps.analyze.outputs.critical-count }}
+  report-path:
+    description: 'Path to generated report'
+    value: ${{ steps.analyze.outputs.report-path }}
 
 runs:
   using: 'composite'
@@ -53,38 +53,51 @@ runs:
       id: analyze
       shell: bash
       run: |
-        # Run FlagGuard analysis
-        OUTPUT=$(flagguard analyze \
+        REPORT_EXT="${{ inputs.output-format == 'json' && 'json' || 'md' }}"
+        
+        flagguard analyze \
           --config "${{ inputs.config-path }}" \
           --source "${{ inputs.source-path }}" \
-          --format "${{ inputs.output-format }}" \
-          ${{ inputs.use-llm == 'true' && '' || '--no-llm' }} \
-          2>&1) || true
-        
-        echo "$OUTPUT"
+          --output "flagguard-report.${REPORT_EXT}" \
+          --format ${{ inputs.output-format }} \
+          --no-llm \
+          2>&1 | tee flagguard-output.txt || true
         
         # Parse results
-        CONFLICTS=$(echo "$OUTPUT" | grep -oP 'Conflicts found: \K\d+' || echo "0")
-        DEAD_CODE=$(echo "$OUTPUT" | grep -oP 'Dead code blocks: \K\d+' || echo "0")
+        CONFLICTS=$(grep -oP 'Conflicts found: \K\d+' flagguard-output.txt || echo "0")
+        CRITICAL=$(grep -c 'CRITICAL' flagguard-output.txt || echo "0")
         
-        echo "conflicts=$CONFLICTS" >> $GITHUB_OUTPUT
-        echo "dead_code=$DEAD_CODE" >> $GITHUB_OUTPUT
-        
-        if [ "$CONFLICTS" -gt 0 ] && [ "${{ inputs.fail-on-conflict }}" == "true" ]; then
-          echo "status=fail" >> $GITHUB_OUTPUT
-          exit 1
-        else
-          echo "status=pass" >> $GITHUB_OUTPUT
-        fi
+        echo "conflicts-found=$CONFLICTS" >> $GITHUB_OUTPUT
+        echo "critical-count=$CRITICAL" >> $GITHUB_OUTPUT
+        echo "report-path=flagguard-report.${REPORT_EXT}" >> $GITHUB_OUTPUT
     
-    - name: Create Summary
+    - name: Upload Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: flagguard-report
+        path: flagguard-report.*
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request' && inputs.output-format == 'markdown'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('flagguard-report.md', 'utf8');
+          const truncated = report.substring(0, 60000);
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '## 🚩 FlagGuard Analysis\n\n' + truncated
+          });
+    
+    - name: Fail on Critical
+      if: inputs.fail-on-critical == 'true'
       shell: bash
-      if: always()
       run: |
-        echo "## 🚩 FlagGuard Analysis Results" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| Conflicts | ${{ steps.analyze.outputs.conflicts }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Dead Code Blocks | ${{ steps.analyze.outputs.dead_code }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Status | ${{ steps.analyze.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.analyze.outputs.critical-count }}" != "0" ]; then
+          echo "::error::Critical flag conflicts detected!"
+          exit 1
+        fi

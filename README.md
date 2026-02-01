@@ -1,40 +1,51 @@
-# FlagGuard 🚩
+# 🚩 FlagGuard
 
-**AI-Powered Feature Flag Conflict Analyzer**
+**AI Feature Flag Conflict Analyzer**
 
+[![PyPI](https://img.shields.io/pypi/v/flagguard)](https://pypi.org/project/flagguard/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Tests](https://github.com/yourusername/flagguard/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/flagguard/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-FlagGuard is a static analysis tool that detects conflicts, impossible states, and dead code in feature flag configurations. It combines AST parsing, SAT solving, and LLM explanations to help you maintain healthy feature flag systems.
+FlagGuard detects **conflicts**, **impossible states**, and **dead code** in your feature flag configurations using SAT solving and static analysis.
 
-## 🎯 Key Features
+## 🎯 The Problem
 
-- **Conflict Detection**: Uses Z3 SAT solver to find impossible flag combinations
-- **Dead Code Finder**: Identifies code that can never execute due to flag configurations
-- **Dependency Graph**: Visualizes flag relationships with Mermaid diagrams
-- **Multi-Platform Support**: Parses LaunchDarkly, Unleash, and generic JSON configs
-- **LLM Explanations**: Uses Ollama with Gemma 2B for human-readable explanations
-- **CLI & Web UI**: Command-line interface and Gradio-based web interface
+- Companies with 100+ feature flags face "flag debt"
+- Flags interact in unexpected ways—enabling Flag A while Flag B is off may crash the app
+- Dead code behind never-enabled flags bloats the codebase
+- **Knight Capital lost $440M** partly due to a feature flag misconfiguration
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| **Conflict Detection** | Find impossible flag combinations using SAT solving |
+| **Dead Code Finder** | Identify unreachable code paths |
+| **Dependency Graph** | Visualize flag relationships with Mermaid |
+| **LLM Explanations** | Plain English conflict descriptions (via Ollama) |
+| **CI Integration** | GitHub Action to block deploys with conflicts |
+| **Multi-Platform** | Support for LaunchDarkly, Unleash, and custom formats |
+
+## 📦 Installation
+
+```bash
+pip install flagguard
+```
+
+Or with [uv](https://github.com/astral-sh/uv):
+
+```bash
+uv add flagguard
+```
 
 ## 🚀 Quick Start
 
-### Installation
-
 ```bash
-# Using pip
-pip install flagguard
-
-# Using uv (recommended)
-uv pip install flagguard
-```
-
-### Basic Usage
-
-```bash
-# Analyze flags and source code
+# Analyze your flags
 flagguard analyze --config flags.json --source ./src
 
-# Parse and display configuration
+# Just parse and display flags
 flagguard parse --config flags.json
 
 # Generate dependency graph
@@ -44,162 +55,126 @@ flagguard graph --config flags.json
 flagguard check-llm
 ```
 
-### Web Interface
+### Example Output
+
+```
+╭────────────────────╮
+│ FlagGuard Analysis │
+╰────── v0.1.0 ──────╯
+✓ Loaded 4 flags from flags.json
+✓ Scanned 15 files, found 23 flag usages
+✓ Found 3 conflicts, 1 dead code block
+
+CONFLICTS:
+  [CRITICAL] C001: Flags premium, payment cannot both be enabled
+  [HIGH] C002: Enabling premium requires payment to be enabled
+```
+
+## 📖 Supported Formats
+
+| Platform | Format | Status |
+|----------|--------|--------|
+| LaunchDarkly | JSON | ✅ Full support |
+| Unleash | YAML/JSON | ✅ Full support |
+| Custom | JSON | ✅ Full support |
+
+## 🔧 GitHub Action
+
+Add FlagGuard to your CI pipeline:
+
+```yaml
+name: Feature Flag Check
+on: [pull_request]
+
+jobs:
+  flagguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run FlagGuard
+        uses: yourusername/flagguard@v1
+        with:
+          config-path: 'flags/config.json'
+          source-path: 'src'
+          fail-on-critical: 'true'
+```
+
+## 🖥️ Web UI
+
+Launch the Gradio web interface:
 
 ```bash
-# Launch Gradio web UI
 python -m flagguard.ui.app
 ```
 
-## 📋 Configuration Formats
+Then open http://localhost:7860 in your browser.
 
-### LaunchDarkly JSON
+## 📚 CLI Reference
 
-```json
-{
-  "flags": {
-    "new_checkout": {
-      "key": "new_checkout",
-      "on": true,
-      "prerequisites": [{"key": "payment_enabled"}]
-    }
-  }
-}
-```
+| Command | Description |
+|---------|-------------|
+| `flagguard analyze` | Full analysis with conflict detection |
+| `flagguard parse` | Parse and display flag configuration |
+| `flagguard graph` | Generate Mermaid dependency diagram |
+| `flagguard check-llm` | Verify Ollama/LLM availability |
+| `flagguard init` | Create .flagguard.yaml config template |
+| `flagguard explain` | Get detailed LLM explanation for a conflict |
 
-### Generic JSON
+## 🔌 Python API
 
-```json
-{
-  "flags": [
-    {"name": "feature_a", "enabled": true},
-    {"name": "feature_b", "enabled": true, "dependencies": ["feature_a"]}
-  ]
-}
-```
+```python
+from flagguard import FlagGuardAnalyzer
+from pathlib import Path
 
-### Unleash YAML
+analyzer = FlagGuardAnalyzer(explain_with_llm=False)
+report = analyzer.analyze(
+    config_path=Path("flags.json"),
+    source_path=Path("./src"),
+    output_format="markdown",
+)
 
-```yaml
-features:
-  - name: new_checkout
-    enabled: true
-    strategies:
-      - name: default
-```
-
-## 🔧 Development
-
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/flagguard.git
-cd flagguard
-
-# Install with dev dependencies
-uv pip install -e ".[dev]"
-
-# Setup pre-commit hooks
-pre-commit install
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src/flagguard --cov-report=html
-
-# Run specific test file
-pytest tests/unit/test_parsers.py
-```
-
-### Code Quality
-
-```bash
-# Linting
-ruff check src tests
-
-# Type checking
-mypy src
-
-# Formatting
-ruff format src tests
-```
-
-## 📊 Output Formats
-
-### Markdown Report
-
-```bash
-flagguard analyze --config flags.json --source ./src --format markdown -o report.md
-```
-
-### JSON (for CI/CD)
-
-```bash
-flagguard analyze --config flags.json --source ./src --format json -o report.json
-```
-
-## 🤖 LLM Integration
-
-FlagGuard uses Ollama for local LLM inference. Install Ollama and pull the default model:
-
-```bash
-# Install Ollama from https://ollama.ai
-ollama pull gemma2:2b
-```
-
-Disable LLM features with `--no-llm` flag:
-
-```bash
-flagguard analyze --config flags.json --source ./src --no-llm
+print(f"Found {len(report['conflicts'])} conflicts")
 ```
 
 ## 🏗️ Architecture
 
 ```
 flagguard/
-├── core/          # Data models and utilities
-├── parsers/       # Config and source code parsers
-│   └── ast/       # Tree-sitter based extractors
-├── analysis/      # SAT solver and conflict detection
-├── llm/           # Ollama integration
-├── reporters/     # Output formatters
-├── cli/           # Command-line interface
-└── ui/            # Gradio web interface
+├── parsers/          # Config & AST parsers
+│   ├── launchdarkly.py
+│   ├── unleash.py
+│   └── ast/          # Python/JS source parsing
+├── analysis/         # SAT solver & conflict detection
+│   ├── z3_wrapper.py
+│   ├── conflict_detector.py
+│   └── dead_code.py
+├── llm/              # LLM integration
+│   ├── ollama_client.py
+│   └── explainer.py
+├── reporters/        # Output formatters
+│   ├── markdown.py
+│   └── json_reporter.py
+├── cli/              # Command-line interface
+└── ui/               # Gradio web interface
 ```
-
-## 📖 Documentation
-
-- [Full Documentation](https://flagguard.readthedocs.io)
-- [API Reference](https://flagguard.readthedocs.io/api)
-- [Examples](./examples)
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Run tests: `pytest`
-5. Submit a pull request
+```bash
+# Setup development environment
+git clone https://github.com/yourusername/flagguard.git
+cd flagguard
+uv sync
+uv run pytest tests/ -v
+```
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
-
-- [Z3 Theorem Prover](https://github.com/Z3Prover/z3) for SAT solving
-- [Tree-sitter](https://tree-sitter.github.io) for AST parsing
-- [Ollama](https://ollama.ai) for local LLM inference
-- [Gradio](https://gradio.app) for the web interface
-
 ---
 
-Made with ❤️ by the FlagGuard team
+Made with ❤️ for the feature flag community

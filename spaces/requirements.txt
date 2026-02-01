@@ -1,0 +1,9 @@
+gradio>=5.0.0
+pyyaml>=6.0
+networkx>=3.0
+z3-solver>=4.12
+tree-sitter>=0.21
+tree-sitter-python
+tree-sitter-javascript
+click>=8.0
+rich>=13.0

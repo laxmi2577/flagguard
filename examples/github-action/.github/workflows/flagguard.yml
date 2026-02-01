@@ -1,0 +1,23 @@
+name: Feature Flag Check
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'flags/**'
+      - '*.json'
+      - '*.yaml'
+
+jobs:
+  flagguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run FlagGuard
+        uses: yourusername/flagguard@v1
+        with:
+          config-path: 'flags/config.json'
+          source-path: 'src'
+          fail-on-critical: 'true'
+          output-format: 'markdown'

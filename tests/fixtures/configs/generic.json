@@ -1,0 +1,22 @@
+{
+  "flags": [
+    {
+      "name": "feature_a",
+      "enabled": true,
+      "type": "boolean"
+    },
+    {
+      "name": "feature_b",
+      "enabled": true,
+      "type": "boolean",
+      "dependencies": [
+        "feature_a"
+      ]
+    },
+    {
+      "name": "feature_c",
+      "enabled": false,
+      "type": "boolean"
+    }
+  ]
+}

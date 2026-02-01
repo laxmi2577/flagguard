@@ -137,9 +137,9 @@ Upload your feature flag configuration to detect conflicts, impossible states, a
                 report_output = gr.Markdown(label="Full Report")
             
             with gr.TabItem("🔗 Dependency Graph"):
-                graph_output = gr.Code(
-                    label="Mermaid Diagram",
-                    language="mermaid",
+                graph_output = gr.Textbox(
+                    label="Mermaid Diagram (Copy to mermaid.live)",
+                    lines=15,
                 )
         
         analyze_btn.click(

@@ -1,0 +1,29 @@
+{
+  "flags": {
+    "new_checkout": {
+      "key": "new_checkout",
+      "on": true,
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "offVariation": 1,
+      "prerequisites": [{"key": "payment_enabled", "variation": 0}],
+      "description": "New checkout flow"
+    },
+    "payment_enabled": {
+      "key": "payment_enabled",
+      "on": false,
+      "variations": [true, false],
+      "fallthrough": {"variation": 1},
+      "offVariation": 1,
+      "description": "Payment system toggle"
+    },
+    "premium_tier": {
+      "key": "premium_tier",
+      "on": true,
+      "variations": [true, false],
+      "fallthrough": {"variation": 0},
+      "prerequisites": [{"key": "payment_enabled", "variation": 0}],
+      "description": "Premium features"
+    }
+  }
+}
