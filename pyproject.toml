@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "FlagGuard Team", email = "flagguard@example.com"}
+    {name = "Laxmi Ranjan", email = "laxmiranjan444@gmail.com"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -50,10 +50,10 @@ dev = [
 flagguard = "flagguard.cli.main:cli"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/flagguard"
+Homepage = "https://github.com/laxmi2577/flagguard"
 Documentation = "https://flagguard.readthedocs.io"
-Repository = "https://github.com/yourusername/flagguard"
-Issues = "https://github.com/yourusername/flagguard/issues"
+Repository = "https://github.com/laxmi2577/flagguard"
+Issues = "https://github.com/laxmi2577/flagguard/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flagguard"]

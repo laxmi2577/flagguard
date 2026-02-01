@@ -1,4 +1,4 @@
-   
+﻿   
     FlagGuard: AI Feature Flag Conflict Analyzer
 ## Complete Consolidated Project Documentation
 
@@ -36,13 +36,13 @@
 
 # FlagGuard Project Breakdown
 
-## 🏗️ Overview
+## ðŸ—ï¸ Overview
 
 This directory contains the complete project breakdown for **FlagGuard**, an AI-powered feature flag conflict analyzer. The documentation is organized into modular files for easy navigation.
 
 ---
 
-## 📚 Document Index
+## ðŸ“š Document Index
 
 | # | Document | Description |
 |---|----------|-------------|
@@ -63,7 +63,7 @@ This directory contains the complete project breakdown for **FlagGuard**, an AI-
 
 ---
 
-## 🏛️ Architecture Overview
+## ðŸ›ï¸ Architecture Overview
 
 ```mermaid
 flowchart TB
@@ -92,7 +92,7 @@ flowchart TB
 
 ---
 
-## 🛠️ Tech Stack
+## ðŸ› ï¸ Tech Stack
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
@@ -108,20 +108,20 @@ flowchart TB
 
 ---
 
-## ⏱️ Estimated Timeline
+## â±ï¸ Estimated Timeline
 
 | Phase | Duration | Difficulty |
 |-------|----------|------------|
-| Foundation & Config Parsing | 2 weeks | ⭐⭐ |
-| AST Parsing | 2 weeks | ⭐⭐⭐ |
-| SAT Solver | 3 weeks | ⭐⭐⭐⭐ |
-| LLM & Reporting | 1 week | ⭐⭐⭐ |
-| UI, CI & Polish | 2 weeks | ⭐⭐ |
+| Foundation & Config Parsing | 2 weeks | â­â­ |
+| AST Parsing | 2 weeks | â­â­â­ |
+| SAT Solver | 3 weeks | â­â­â­â­ |
+| LLM & Reporting | 1 week | â­â­â­ |
+| UI, CI & Polish | 2 weeks | â­â­ |
 | **Total** | **~10 weeks** | |
 
 ---
 
-## 🚀 Getting Started
+## ðŸš€ Getting Started
 
 1. Read [00-overview.md](#section-00-project-overview--vision) for project context
 2. Review [01-milestones.md](#section-01-milestones--timeline) for development phases
@@ -130,7 +130,7 @@ flowchart TB
 
 ---
 
-## 📖 How to Use This Documentation
+## ðŸ“– How to Use This Documentation
 
 - **For Learning**: Read documents 00-02 to understand the "why"
 - **For Implementation**: Follow documents 03-10 step by step
@@ -178,7 +178,7 @@ FlagGuard is a **static analysis tool** that detects conflicts, impossible state
 **Industry Examples:**
 - **Knight Capital (2012)**: Lost $440M partly due to a misconfigured feature flag
 - **Facebook (2019)**: Outage caused by configuration change interaction
-- **Knight Capital**: Reused a flag that controlled old, dead code – code that still existed in production
+- **Knight Capital**: Reused a flag that controlled old, dead code â€“ code that still existed in production
 
 ### 1.3 Why This Matters
 
@@ -221,21 +221,21 @@ FlagGuard is a **static analysis tool** that detects conflicts, impossible state
 
 | Feature | MVP | v1.0 | Enterprise |
 |---------|-----|------|------------|
-| Config parsing (JSON/YAML) | ✅ | ✅ | ✅ |
-| Python code scanning | ✅ | ✅ | ✅ |
-| JavaScript/TypeScript scanning | ✅ | ✅ | ✅ |
-| SAT-based conflict detection | ✅ | ✅ | ✅ |
-| Dead code identification | ✅ | ✅ | ✅ |
-| Dependency graph (Mermaid) | ✅ | ✅ | ✅ |
-| CLI tool | ✅ | ✅ | ✅ |
-| Markdown reports | ✅ | ✅ | ✅ |
-| LLM explanations | ✅ | ✅ | ✅ |
-| Gradio Web UI | ✅ | ✅ | ✅ |
-| GitHub Action | | ✅ | ✅ |
-| JSON/SARIF output | | ✅ | ✅ |
-| Go/Java/Ruby support | | | ✅ |
-| REST API | | | ✅ |
-| Dashboard | | | ✅ |
+| Config parsing (JSON/YAML) | âœ… | âœ… | âœ… |
+| Python code scanning | âœ… | âœ… | âœ… |
+| JavaScript/TypeScript scanning | âœ… | âœ… | âœ… |
+| SAT-based conflict detection | âœ… | âœ… | âœ… |
+| Dead code identification | âœ… | âœ… | âœ… |
+| Dependency graph (Mermaid) | âœ… | âœ… | âœ… |
+| CLI tool | âœ… | âœ… | âœ… |
+| Markdown reports | âœ… | âœ… | âœ… |
+| LLM explanations | âœ… | âœ… | âœ… |
+| Gradio Web UI | âœ… | âœ… | âœ… |
+| GitHub Action | | âœ… | âœ… |
+| JSON/SARIF output | | âœ… | âœ… |
+| Go/Java/Ruby support | | | âœ… |
+| REST API | | | âœ… |
+| Dashboard | | | âœ… |
 
 ### 3.2 Key Differentiators
 
@@ -412,29 +412,29 @@ flowchart LR
 
 ### 8.1 In Scope (MVP)
 
-- ✅ Parse LaunchDarkly JSON exports
-- ✅ Parse Unleash YAML/JSON
-- ✅ Parse generic JSON flag format
-- ✅ Scan Python source code
-- ✅ Scan JavaScript/TypeScript source code
-- ✅ Detect flag conflicts using SAT
-- ✅ Find dead code behind disabled flags
-- ✅ Generate dependency graphs
-- ✅ CLI with rich output
-- ✅ Gradio web interface
-- ✅ Markdown and JSON reports
-- ✅ LLM-powered explanations
+- âœ… Parse LaunchDarkly JSON exports
+- âœ… Parse Unleash YAML/JSON
+- âœ… Parse generic JSON flag format
+- âœ… Scan Python source code
+- âœ… Scan JavaScript/TypeScript source code
+- âœ… Detect flag conflicts using SAT
+- âœ… Find dead code behind disabled flags
+- âœ… Generate dependency graphs
+- âœ… CLI with rich output
+- âœ… Gradio web interface
+- âœ… Markdown and JSON reports
+- âœ… LLM-powered explanations
 
 ### 8.2 Out of Scope (MVP)
 
-- ❌ Real-time flag sync (polling LaunchDarkly API)
-- ❌ IDE plugins (VS Code, IntelliJ)
-- ❌ Go, Java, Ruby, PHP support
-- ❌ Runtime monitoring
-- ❌ Historical trend tracking
-- ❌ Multi-repo analysis
-- ❌ Custom LLM fine-tuning
-- ❌ Enterprise SSO/RBAC
+- âŒ Real-time flag sync (polling LaunchDarkly API)
+- âŒ IDE plugins (VS Code, IntelliJ)
+- âŒ Go, Java, Ruby, PHP support
+- âŒ Runtime monitoring
+- âŒ Historical trend tracking
+- âŒ Multi-repo analysis
+- âŒ Custom LLM fine-tuning
+- âŒ Enterprise SSO/RBAC
 
 ---
 
@@ -590,18 +590,18 @@ flowchart LR
 
 | Phase | Name | Duration | Difficulty | Deliverables |
 |---|---|---|---|---|
-| 1 | Foundation & Config Parsing | Weeks 1-2 | ⭐⭐ Easy | Project setup, config parsers |
-| 2 | AST Parsing & Flag Extraction | Weeks 3-4 | ⭐⭐⭐ Medium | tree-sitter integration, flag detection |
-| 3 | SAT Solver & Conflict Detection | Weeks 5-7 | ⭐⭐⭐⭐ Hard | Z3 integration, conflict engine |
-| 4 | LLM Integration & Reporting | Week 8 | ⭐⭐⭐ Medium | Gemma 2B, report generation |
-| 5 | UI, CI & Polish | Weeks 9-10 | ⭐⭐ Easy | Gradio, GitHub Actions, docs |
+| 1 | Foundation & Config Parsing | Weeks 1-2 | â­â­ Easy | Project setup, config parsers |
+| 2 | AST Parsing & Flag Extraction | Weeks 3-4 | â­â­â­ Medium | tree-sitter integration, flag detection |
+| 3 | SAT Solver & Conflict Detection | Weeks 5-7 | â­â­â­â­ Hard | Z3 integration, conflict engine |
+| 4 | LLM Integration & Reporting | Week 8 | â­â­â­ Medium | Gemma 2B, report generation |
+| 5 | UI, CI & Polish | Weeks 9-10 | â­â­ Easy | Gradio, GitHub Actions, docs |
 
 ---
 
 ## Phase 1: Foundation & Config Parsing
 
 **Duration:** 2 weeks  
-**Difficulty:** ⭐⭐ Easy  
+**Difficulty:** â­â­ Easy  
 **Prerequisites:** Basic Python, JSON/YAML parsing
 
 ### Learning Goals
@@ -630,7 +630,7 @@ flowchart LR
 ## Phase 2: AST Parsing & Flag Extraction
 
 **Duration:** 2 weeks  
-**Difficulty:** ⭐⭐⭐ Medium  
+**Difficulty:** â­â­â­ Medium  
 **Prerequisites:** Phase 1, basic understanding of AST
 
 ### Learning Goals
@@ -658,7 +658,7 @@ flowchart LR
 ## Phase 3: SAT Solver & Conflict Detection
 
 **Duration:** 3 weeks  
-**Difficulty:** ⭐⭐⭐⭐ Hard  
+**Difficulty:** â­â­â­â­ Hard  
 **Prerequisites:** Phase 1-2, Boolean logic
 
 ### Learning Goals
@@ -688,7 +688,7 @@ flowchart LR
 ## Phase 4: LLM Integration & Reporting
 
 **Duration:** 1 week  
-**Difficulty:** ⭐⭐⭐ Medium  
+**Difficulty:** â­â­â­ Medium  
 **Prerequisites:** Phase 3, Ollama installed
 
 ### Learning Goals
@@ -716,7 +716,7 @@ flowchart LR
 ## Phase 5: UI, CI & Polish
 
 **Duration:** 2 weeks  
-**Difficulty:** ⭐⭐ Easy  
+**Difficulty:** â­â­ Easy  
 **Prerequisites:** All previous phases
 
 ### Learning Goals
@@ -1000,7 +1000,7 @@ Use Z3 to mathematically detect impossible flag states and conflicts.
 | Component | File | Description |
 |-----------|------|-------------|
 | Z3 wrapper | `analysis/z3_wrapper.py` | High-level Z3 interface |
-| Encoder | `analysis/constraint_encoder.py` | Flags → Z3 constraints |
+| Encoder | `analysis/constraint_encoder.py` | Flags â†’ Z3 constraints |
 | Detector | `analysis/conflict_detector.py` | Find conflicts |
 
 ### How It Works
@@ -1361,7 +1361,7 @@ readme = \"README.md\"
 license = {text = \"MIT\"}
 requires-python = \">=3.11\"
 authors = [
-    {name = \"Your Name\", email = \"you@example.com\"}
+    {name = \"Laxmi Ranjan\", email = \"laxmiranjan444@gmail.com\"}
 ]
 classifiers = [
     \"Development Status :: 3 - Alpha\",
@@ -1746,7 +1746,7 @@ This section covers parsing feature flag configurations from three sources:
 ## 2.1 Base Parser & Data Models
 
 ### Task 2.1.1: Create FlagDefinition Data Model
-**Time:** 20 minutes | **Difficulty:** â­â­ Medium
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/core/models.py`
 
@@ -1820,9 +1820,9 @@ class FlagDefinition:
 ```
 
 **Edge Cases:**
-- Empty flag name â†’ raise `ValueError`
-- Missing variations for boolean â†’ auto-create
-- Invalid flag type â†’ raise `ValueError`
+- Empty flag name Ã¢â€ â€™ raise `ValueError`
+- Missing variations for boolean Ã¢â€ â€™ auto-create
+- Invalid flag type Ã¢â€ â€™ raise `ValueError`
 
 **Testing Requirements:**
 - [ ] Test valid flag creation
@@ -1833,7 +1833,7 @@ class FlagDefinition:
 ---
 
 ### Task 2.1.2: Create Abstract Base Parser
-**Time:** 15 minutes | **Difficulty:** â­â­ Medium
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/base.py`
 
@@ -1886,7 +1886,7 @@ class ConfigParser(ABC):
 ## 2.2 LaunchDarkly Parser
 
 ### Task 2.2.1: Implement LaunchDarkly JSON Parser
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/launchdarkly.py`
 
@@ -1997,17 +1997,17 @@ class LaunchDarklyParser(ConfigParser):
 ```
 
 **Edge Cases:**
-- [ ] Empty flags object â†’ return empty list
-- [ ] Missing variations â†’ default to boolean
-- [ ] Missing fallthrough â†’ default to first variation
-- [ ] Missing prerequisites â†’ empty dependencies
-- [ ] Invalid JSON â†’ raise clear error
+- [ ] Empty flags object Ã¢â€ â€™ return empty list
+- [ ] Missing variations Ã¢â€ â€™ default to boolean
+- [ ] Missing fallthrough Ã¢â€ â€™ default to first variation
+- [ ] Missing prerequisites Ã¢â€ â€™ empty dependencies
+- [ ] Invalid JSON Ã¢â€ â€™ raise clear error
 
 **Testing Requirements:**
 - [ ] Test minimal flag
 - [ ] Test flag with all fields
 - [ ] Test multiple flags
-- [ ] Test prerequisites â†’ dependencies mapping
+- [ ] Test prerequisites Ã¢â€ â€™ dependencies mapping
 - [ ] Test invalid JSON handling
 
 ---
@@ -2015,7 +2015,7 @@ class LaunchDarklyParser(ConfigParser):
 ## 2.3 Unleash Parser
 
 ### Task 2.3.1: Implement Unleash YAML Parser
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/unleash.py`
 
@@ -2121,7 +2121,7 @@ class UnleashParser(ConfigParser):
 ## 2.4 Generic JSON Parser
 
 ### Task 2.4.1: Implement Generic JSON Parser
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/generic.py`
 
@@ -2189,7 +2189,7 @@ class GenericParser(ConfigParser):
 ## 2.5 Parser Factory
 
 ### Task 2.5.1: Create Parser Factory
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `src/flagguard/parsers/__init__.py`
 
@@ -2262,7 +2262,7 @@ def parse_config(path: Path, format: str | None = None) -> list[FlagDefinition]:
 ## 2.6 Unit Tests
 
 ### Task 2.6.1: Create Test Fixtures
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **Files:**
 - `tests/fixtures/configs/launchdarkly_sample.json`
@@ -2270,7 +2270,7 @@ def parse_config(path: Path, format: str | None = None) -> list[FlagDefinition]:
 - `tests/fixtures/configs/generic_sample.json`
 
 ### Task 2.6.2: Write Parser Tests
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/unit/test_parsers/test_launchdarkly.py`
 
@@ -2375,7 +2375,7 @@ This section extracts feature flag usage from source code using tree-sitter for 
 ## 3.1 Tree-sitter Setup
 
 ### Task 3.1.1: Install Tree-sitter Dependencies
-**Time:** 20 minutes | **Difficulty:** â­â­ Medium
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 - [ ] Install tree-sitter Python bindings
 - [ ] Install language grammars
@@ -2405,7 +2405,7 @@ print(tree.root_node.sexp())  # Should print S-expression
 ---
 
 ### Task 3.1.2: Create Language Registry
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `src/flagguard/parsers/ast/languages.py`
 
@@ -2474,7 +2474,7 @@ def get_language_for_file(file_path: str) -> SupportedLanguage | None:
 ## 3.2 Flag Usage Data Model
 
 ### Task 3.2.1: Create FlagUsage Model
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `src/flagguard/core/models.py` (add to existing)
 
@@ -2530,7 +2530,7 @@ class FlagUsageDatabase:
 ## 3.3 Python Flag Extractor
 
 ### Task 3.3.1: Implement Python Flag Extractor
-**Time:** 60 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 60 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/ast/python.py`
 
@@ -2733,7 +2733,7 @@ class PythonFlagExtractor:
 ## 3.4 JavaScript/TypeScript Extractor
 
 ### Task 3.4.1: Implement JavaScript Flag Extractor
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/ast/javascript.py`
 
@@ -2873,7 +2873,7 @@ class JavaScriptFlagExtractor:
 ## 3.5 Unified Extractor
 
 ### Task 3.5.1: Create Unified Source Scanner
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/parsers/ast/__init__.py`
 
@@ -2947,7 +2947,7 @@ class SourceScanner:
 ## 3.6 Testing
 
 ### Task 3.6.1: Create Test Source Files
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **Files:**
 - `tests/fixtures/source_code/python_sample/app.py`
@@ -2972,7 +2972,7 @@ class PaymentProcessor:
 ```
 
 ### Task 3.6.2: Write Extractor Tests
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 ---
 
@@ -3023,17 +3023,17 @@ This is the **core analysis engine** of FlagGuard. It uses SAT (Boolean Satisfia
 ### Learning Prerequisites
 Before starting this section, understand:
 
-1. **Boolean Logic**: AND (âˆ§), OR (âˆ¨), NOT (Â¬), IMPLIES (â†’)
+1. **Boolean Logic**: AND (Ã¢Ë†Â§), OR (Ã¢Ë†Â¨), NOT (Ã‚Â¬), IMPLIES (Ã¢â€ â€™)
 2. **SAT Problem**: Given a boolean formula, find variable assignments that make it TRUE
 3. **UNSAT**: When NO assignment can satisfy the formula = CONFLICT
 
 **Quick Example:**
 ```
-Formula: (A âˆ¨ B) âˆ§ (Â¬A âˆ¨ Â¬B) âˆ§ (A) âˆ§ (B)
+Formula: (A Ã¢Ë†Â¨ B) Ã¢Ë†Â§ (Ã‚Â¬A Ã¢Ë†Â¨ Ã‚Â¬B) Ã¢Ë†Â§ (A) Ã¢Ë†Â§ (B)
 
 Breaking it down:
-- (A âˆ¨ B): A or B must be true
-- (Â¬A âˆ¨ Â¬B): A or B must be false (not both true)
+- (A Ã¢Ë†Â¨ B): A or B must be true
+- (Ã‚Â¬A Ã¢Ë†Â¨ Ã‚Â¬B): A or B must be false (not both true)
 - (A): A must be true
 - (B): B must be true
 
@@ -3046,7 +3046,7 @@ This is a CONFLICT!
 ## 4.2 Z3 Setup
 
 ### Task 4.2.1: Install and Verify Z3
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 - [ ] Install Z3 Python bindings
 - [ ] Verify installation
@@ -3084,7 +3084,7 @@ elif result == unsat:
 ---
 
 ### Task 4.2.2: Create Z3 Wrapper
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/analysis/z3_wrapper.py`
 
@@ -3231,16 +3231,16 @@ class FlagSATSolver:
 ```
 
 **Edge Cases:**
-- [ ] Empty solver (no constraints) â†’ always SAT
-- [ ] Single flag â†’ always SAT
-- [ ] Unknown result (timeout) â†’ handle gracefully
+- [ ] Empty solver (no constraints) Ã¢â€ â€™ always SAT
+- [ ] Single flag Ã¢â€ â€™ always SAT
+- [ ] Unknown result (timeout) Ã¢â€ â€™ handle gracefully
 
 ---
 
 ## 4.3 Constraint Encoder
 
 ### Task 4.3.1: Encode Flag Configurations as Constraints
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Hard
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Hard
 
 **File:** `src/flagguard/analysis/constraint_encoder.py`
 
@@ -3323,7 +3323,7 @@ class ConstraintEncoder:
 ## 4.4 Conflict Detection Engine
 
 ### Task 4.4.1: Implement Conflict Detector
-**Time:** 60 minutes | **Difficulty:** â­â­â­â­ Hard
+**Time:** 60 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Hard
 
 **File:** `src/flagguard/analysis/conflict_detector.py`
 
@@ -3470,7 +3470,7 @@ class ConflictDetector:
 ## 4.5 Dead Code Finder
 
 ### Task 4.5.1: Implement Dead Code Detection
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/analysis/dead_code.py`
 
@@ -3550,7 +3550,7 @@ class DeadCodeFinder:
 ## 4.6 Path Analyzer
 
 ### Task 4.6.1: Build Dependency Graph
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/analysis/path_analyzer.py`
 
@@ -3645,7 +3645,7 @@ class PathAnalyzer:
 ## 4.7 Testing
 
 ### Task 4.7.1: Create Test Cases for Conflict Detection
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/unit/test_analysis/test_conflict_detector.py`
 
@@ -3752,7 +3752,7 @@ This section adds the "human touch" to FlagGuard's technical analysis:
 ## 5.1 Ollama Setup
 
 ### Task 5.1.1: Install and Configure Ollama
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 - [ ] Install Ollama
 - [ ] Pull Gemma 2B model
@@ -3793,7 +3793,7 @@ print(response["message"]["content"])
 ---
 
 ### Task 5.1.2: Create Ollama Client Wrapper
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/llm/ollama_client.py`
 
@@ -3871,7 +3871,7 @@ class MockLLMClient:
 ## 5.2 Prompt Engineering
 
 ### Task 5.2.1: Create Prompt Templates
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/llm/prompts.py`
 
@@ -4026,7 +4026,7 @@ def format_executive_summary_prompt(
 ## 5.3 Explanation Generator
 
 ### Task 5.3.1: Create LLM Explainer
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/llm/explainer.py`
 
@@ -4194,7 +4194,7 @@ Analyzed {total_flags} feature flags across {files_scanned} source files.
 ## 5.4 Report Generation
 
 ### Task 5.4.1: Create Markdown Reporter
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/reporters/markdown.py`
 
@@ -4265,7 +4265,7 @@ class MarkdownReporter:
     
     def _conflicts_section(self, report: AnalysisReport) -> str:
         if not report.conflicts:
-            return "## Conflicts\n\nâœ… No conflicts detected!"
+            return "## Conflicts\n\nÃ¢Å“â€¦ No conflicts detected!"
         
         lines = ["## Conflicts", ""]
         
@@ -4279,8 +4279,8 @@ class MarkdownReporter:
             if severity not in by_severity:
                 continue
             
-            emoji = {"critical": "ðŸ”´", "high": "ðŸŸ ", "medium": "ðŸŸ¡", "low": "ðŸŸ¢"}
-            lines.append(f"### {emoji.get(severity.value, 'âšª')} {severity.value.title()} ({len(by_severity[severity])})")
+            emoji = {"critical": "Ã°Å¸â€Â´", "high": "Ã°Å¸Å¸Â ", "medium": "Ã°Å¸Å¸Â¡", "low": "Ã°Å¸Å¸Â¢"}
+            lines.append(f"### {emoji.get(severity.value, 'Ã¢Å¡Âª')} {severity.value.title()} ({len(by_severity[severity])})")
             lines.append("")
             
             for conflict in by_severity[severity]:
@@ -4300,7 +4300,7 @@ class MarkdownReporter:
     
     def _dead_code_section(self, report: AnalysisReport) -> str:
         if not report.dead_code:
-            return "## Dead Code\n\nâœ… No dead code detected!"
+            return "## Dead Code\n\nÃ¢Å“â€¦ No dead code detected!"
         
         lines = ["## Dead Code", ""]
         
@@ -4331,33 +4331,33 @@ class MarkdownReporter:
 
 | Severity | Count | Action |
 |----------|-------|--------|
-| ðŸ”´ Critical | {critical} | Fix before deploy |
-| ðŸŸ  High | {high} | Fix this sprint |
-| ðŸŸ¡ Medium | {medium} | Schedule fix |
-| ðŸŸ¢ Low | {low} | Track in backlog |"""
+| Ã°Å¸â€Â´ Critical | {critical} | Fix before deploy |
+| Ã°Å¸Å¸Â  High | {high} | Fix this sprint |
+| Ã°Å¸Å¸Â¡ Medium | {medium} | Schedule fix |
+| Ã°Å¸Å¸Â¢ Low | {low} | Track in backlog |"""
     
     def _recommendations(self, report: AnalysisReport) -> str:
         recs = ["## Recommendations", ""]
         
         if any(c.severity == ConflictSeverity.CRITICAL for c in report.conflicts):
-            recs.append("1. ðŸš¨ **Immediate:** Address critical conflicts before next deployment")
+            recs.append("1. Ã°Å¸Å¡Â¨ **Immediate:** Address critical conflicts before next deployment")
         
         if report.dead_code:
-            recs.append(f"2. ðŸ§¹ **Cleanup:** Remove {len(report.dead_code)} dead code blocks")
+            recs.append(f"2. Ã°Å¸Â§Â¹ **Cleanup:** Remove {len(report.dead_code)} dead code blocks")
         
         cycles = report.dependency_graph.detect_cycles()
         if cycles:
-            recs.append(f"3. ðŸ”„ **Fix Cycles:** {len(cycles)} circular dependencies detected")
+            recs.append(f"3. Ã°Å¸â€â€ž **Fix Cycles:** {len(cycles)} circular dependencies detected")
         
         if not recs[2:]:
-            recs.append("âœ… No immediate action required!")
+            recs.append("Ã¢Å“â€¦ No immediate action required!")
         
         return "\n".join(recs)
     
     def _footer(self, report: AnalysisReport) -> str:
         return f"""---
 
-*Generated by [FlagGuard](https://github.com/yourusername/flagguard) v0.1.0*
+*Generated by [FlagGuard](https://github.com/laxmi2577/flagguard) v0.1.0*
 """
 
     def save(self, report: AnalysisReport, path: Path) -> None:
@@ -4369,7 +4369,7 @@ class MarkdownReporter:
 ---
 
 ### Task 5.4.2: Create JSON Reporter
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `src/flagguard/reporters/json_reporter.py`
 
@@ -4422,7 +4422,7 @@ class JSONReporter:
 ## 5.5 Integration
 
 ### Task 5.5.1: Create Analysis Orchestrator
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/core/orchestrator.py`
 
@@ -4561,7 +4561,7 @@ This section creates two user interfaces:
 ## 6.1 CLI Setup
 
 ### Task 6.1.1: Setup Click CLI Framework
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 - [ ] Install Click (or Typer)
 - [ ] Create CLI entry point
@@ -4582,7 +4582,7 @@ flagguard = "flagguard.cli.main:cli"
 ---
 
 ### Task 6.1.2: Create Main CLI Structure
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `src/flagguard/cli/main.py`
 
@@ -4689,10 +4689,10 @@ def analyze(
     # Exit code based on critical conflicts
     critical = len([c for c in report.conflicts if c.severity.value == "critical"])
     if critical > 0:
-        console.print(f"\n[bold red]âš  {critical} critical conflict(s) found![/]")
+        console.print(f"\n[bold red]Ã¢Å¡Â  {critical} critical conflict(s) found![/]")
         raise SystemExit(1)
     else:
-        console.print("\n[bold green]âœ“ No critical issues found[/]")
+        console.print("\n[bold green]Ã¢Å“â€œ No critical issues found[/]")
 
 @cli.command()
 @click.option(
@@ -4731,7 +4731,7 @@ def parse(config: Path, format: str):
             table.add_row(
                 flag.name,
                 flag.flag_type.value,
-                "âœ“" if flag.enabled else "âœ—",
+                "Ã¢Å“â€œ" if flag.enabled else "Ã¢Å“â€”",
                 ", ".join(flag.dependencies) or "-"
             )
         
@@ -4791,10 +4791,10 @@ def check_llm():
     
     if client.is_available():
         info = client.get_model_info()
-        console.print("[bold green]âœ“ Ollama is available[/]")
+        console.print("[bold green]Ã¢Å“â€œ Ollama is available[/]")
         console.print(f"  Model: {info.get('name', 'unknown')}")
     else:
-        console.print("[bold red]âœ— Ollama is not available[/]")
+        console.print("[bold red]Ã¢Å“â€” Ollama is not available[/]")
         console.print("  Install from: https://ollama.ai")
         console.print("  Then run: ollama pull gemma2:2b")
 
@@ -4805,7 +4805,7 @@ if __name__ == "__main__":
 ---
 
 ### Task 6.1.3: Add Subcommands
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 Add additional useful commands:
 
@@ -4853,7 +4853,7 @@ analysis:
 ## 6.2 Gradio Web UI
 
 ### Task 6.2.1: Setup Gradio
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 ```bash
 uv pip install gradio
@@ -4880,14 +4880,14 @@ from flagguard.reporters.markdown import AnalysisReport, MarkdownReporter
 def analyze_flags(config_file, source_zip, use_llm: bool):
     """Main analysis function for Gradio."""
     if config_file is None:
-        return "âŒ Please upload a configuration file", "", ""
+        return "Ã¢ÂÅ’ Please upload a configuration file", "", ""
     
     # Parse config
     config_path = Path(config_file.name)
     try:
         flags = parse_config(config_path)
     except Exception as e:
-        return f"âŒ Error parsing config: {e}", "", ""
+        return f"Ã¢ÂÅ’ Error parsing config: {e}", "", ""
     
     # Handle source code (optional)
     usages = None
@@ -4964,7 +4964,7 @@ def analyze_flags(config_file, source_zip, use_llm: bool):
 | Conflicts | {len(conflicts)} |
 | Dead Code | {len(dead_code)} |
 
-{"ðŸ”´ **Critical issues found!**" if any(c.severity.value == "critical" for c in conflicts) else "âœ… **No critical issues**"}
+{"Ã°Å¸â€Â´ **Critical issues found!**" if any(c.severity.value == "critical" for c in conflicts) else "Ã¢Å“â€¦ **No critical issues**"}
 """
     
     # Mermaid graph
@@ -4975,7 +4975,7 @@ def analyze_flags(config_file, source_zip, use_llm: bool):
 # Create Gradio interface
 with gr.Blocks(title="FlagGuard", theme=gr.themes.Soft()) as app:
     gr.Markdown("""
-    # ðŸš© FlagGuard
+    # Ã°Å¸Å¡Â© FlagGuard
     ### AI Feature Flag Conflict Analyzer
     
     Upload your feature flag configuration and source code to detect conflicts,
@@ -4996,16 +4996,16 @@ with gr.Blocks(title="FlagGuard", theme=gr.themes.Soft()) as app:
                 label="Use LLM for explanations",
                 value=True,
             )
-            analyze_btn = gr.Button("ðŸ” Analyze", variant="primary")
+            analyze_btn = gr.Button("Ã°Å¸â€Â Analyze", variant="primary")
         
         with gr.Column(scale=2):
             summary_output = gr.Markdown(label="Summary")
     
     with gr.Tabs():
-        with gr.TabItem("ðŸ“ Full Report"):
+        with gr.TabItem("Ã°Å¸â€œÂ Full Report"):
             report_output = gr.Markdown()
         
-        with gr.TabItem("ðŸ”— Dependency Graph"):
+        with gr.TabItem("Ã°Å¸â€â€” Dependency Graph"):
             graph_output = gr.Code(language="mermaid", label="Mermaid Diagram")
     
     analyze_btn.click(
@@ -5033,7 +5033,7 @@ if __name__ == "__main__":
 ---
 
 ### Task 6.2.2: Add Live Preview
-**Time:** 20 minutes | **Difficulty:** â­â­ Medium
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 Add live preview as user uploads files:
 
@@ -5047,13 +5047,13 @@ def preview_config(config_file):
         flags = parse_config(Path(config_file.name))
         lines = [f"**{len(flags)} flags found:**\n"]
         for f in flags[:10]:
-            status = "âœ…" if f.enabled else "âŒ"
+            status = "Ã¢Å“â€¦" if f.enabled else "Ã¢ÂÅ’"
             lines.append(f"- {status} `{f.name}` ({f.flag_type.value})")
         if len(flags) > 10:
             lines.append(f"- ... and {len(flags) - 10} more")
         return "\n".join(lines)
     except Exception as e:
-        return f"âŒ Error: {e}"
+        return f"Ã¢ÂÅ’ Error: {e}"
 
 # Add to interface
 config_input.change(preview_config, inputs=[config_input], outputs=[preview_md])
@@ -5064,13 +5064,13 @@ config_input.change(preview_config, inputs=[config_input], outputs=[preview_md])
 ## 6.3 Hugging Face Spaces Deployment
 
 ### Task 6.3.1: Create HF Spaces Configuration
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `spaces/README.md`
 ```markdown
 ---
 title: FlagGuard
-emoji: ðŸš©
+emoji: Ã°Å¸Å¡Â©
 colorFrom: blue
 colorTo: purple
 sdk: gradio
@@ -5100,7 +5100,7 @@ tree-sitter-javascript
 ---
 
 ### Task 6.3.2: Deploy to HF Spaces
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 ```bash
 # Install HF CLI
@@ -5115,7 +5115,7 @@ huggingface-cli repo create flagguard --type space --space_sdk gradio
 # Push code
 cd spaces
 git init
-git remote add origin https://huggingface.co/spaces/YOUR_USERNAME/flagguard
+git remote add origin https://huggingface.co/spaces/laxmi2577/flagguard
 git add .
 git commit -m "Initial commit"
 git push -u origin main
@@ -5166,7 +5166,7 @@ A comprehensive testing strategy covering:
 ## 7.1 Testing Infrastructure
 
 ### Task 7.1.1: Setup pytest and Fixtures
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `tests/conftest.py`
 
@@ -5237,25 +5237,25 @@ def mock_llm_client():
 ---
 
 ### Task 7.1.2: Create Test Fixtures
-**Time:** 30 minutes | **Difficulty:** â­ Easy
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **Directory Structure:**
 ```
 tests/fixtures/
-â”œâ”€â”€ configs/
-â”‚   â”œâ”€â”€ launchdarkly_sample.json
-â”‚   â”œâ”€â”€ launchdarkly_with_conflicts.json
-â”‚   â”œâ”€â”€ unleash_sample.yaml
-â”‚   â”œâ”€â”€ generic_sample.json
-â”‚   â””â”€â”€ empty_config.json
-â””â”€â”€ source_code/
-    â”œâ”€â”€ python_sample/
-    â”‚   â”œâ”€â”€ app.py
-    â”‚   â”œâ”€â”€ utils.py
-    â”‚   â””â”€â”€ dead_code.py
-    â””â”€â”€ javascript_sample/
-        â”œâ”€â”€ index.js
-        â””â”€â”€ features.js
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ configs/
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ launchdarkly_sample.json
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ launchdarkly_with_conflicts.json
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ unleash_sample.yaml
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ generic_sample.json
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ empty_config.json
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ source_code/
+    Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ python_sample/
+    Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ app.py
+    Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ utils.py
+    Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ dead_code.py
+    Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ javascript_sample/
+        Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ index.js
+        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ features.js
 ```
 
 **launchdarkly_sample.json:**
@@ -5353,7 +5353,7 @@ def function_with_dead_branch():
 ## 7.2 Unit Tests
 
 ### Task 7.2.1: Parser Unit Tests
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/unit/test_parsers/test_launchdarkly.py`
 
@@ -5496,7 +5496,7 @@ features:
 ---
 
 ### Task 7.2.2: AST Extractor Unit Tests
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/unit/test_parsers/test_python_extractor.py`
 
@@ -5594,7 +5594,7 @@ if is_enabled("flag_b"):
 ---
 
 ### Task 7.2.3: SAT Solver Unit Tests
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/unit/test_analysis/test_z3_wrapper.py`
 
@@ -5741,7 +5741,7 @@ class TestConflictDetector:
 ## 7.3 Integration Tests
 
 ### Task 7.3.1: End-to-End Pipeline Test
-**Time:** 45 minutes | **Difficulty:** â­â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/integration/test_full_pipeline.py`
 
@@ -5805,7 +5805,7 @@ class TestFullPipeline:
 ## 7.4 Security Testing
 
 ### Task 7.4.1: Security Test Cases
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/security/test_security.py`
 
@@ -5881,7 +5881,7 @@ class TestSecurityConcerns:
 ## 7.5 Performance Testing
 
 ### Task 7.5.1: Performance Benchmarks
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `tests/performance/test_performance.py`
 
@@ -5976,7 +5976,7 @@ def func_{i}():
 ## 7.6 CI Integration
 
 ### Task 7.6.1: GitHub Actions Test Workflow
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `.github/workflows/test.yml`
 
@@ -6040,7 +6040,7 @@ jobs:
 ## 7.7 Coverage Requirements
 
 ### Task 7.7.1: Coverage Configuration
-**Time:** 10 minutes | **Difficulty:** â­ Easy
+**Time:** 10 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `pyproject.toml` (add to existing)
 
@@ -6117,7 +6117,7 @@ This section covers:
 ## 8.1 GitHub Actions CI/CD
 
 ### Task 8.1.1: Create FlagGuard Action for Users
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 This is the GitHub Action that USERS will add to their repos.
 
@@ -6126,7 +6126,7 @@ This is the GitHub Action that USERS will add to their repos.
 ```yaml
 name: 'FlagGuard'
 description: 'Analyze feature flags for conflicts and dead code'
-author: 'Your Name'
+author: 'Laxmi Ranjan'
 
 branding:
   icon: 'flag'
@@ -6246,7 +6246,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Run FlagGuard
-        uses: yourusername/flagguard@v1
+        uses: laxmi2577/flagguard@v1
         with:
           config-path: 'flags/launchdarkly.json'
           source-path: 'src'
@@ -6256,7 +6256,7 @@ jobs:
 ---
 
 ### Task 8.1.2: Create Release Workflow
-**Time:** 20 minutes | **Difficulty:** â­â­ Medium
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `.github/workflows/release.yml`
 
@@ -6331,7 +6331,7 @@ jobs:
 ## 8.2 PyPI Publishing
 
 ### Task 8.2.1: Prepare for PyPI
-**Time:** 20 minutes | **Difficulty:** â­ Easy
+**Time:** 20 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 - [ ] Create PyPI account
 - [ ] Create API token
@@ -6348,7 +6348,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "Your Name", email = "you@example.com"}
+    {name = "Laxmi Ranjan", email = "laxmiranjan444@gmail.com"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -6361,10 +6361,10 @@ classifiers = [
 keywords = ["feature-flags", "static-analysis", "SAT-solver", "launchdarkly", "unleash"]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/flagguard"
+Homepage = "https://github.com/laxmi2577/flagguard"
 Documentation = "https://flagguard.readthedocs.io"
-Repository = "https://github.com/yourusername/flagguard"
-Issues = "https://github.com/yourusername/flagguard/issues"
+Repository = "https://github.com/laxmi2577/flagguard"
+Issues = "https://github.com/laxmi2577/flagguard/issues"
 ```
 
 **Manual publish (testing):**
@@ -6387,7 +6387,7 @@ twine upload dist/*
 ## 8.3 Hugging Face Spaces
 
 ### Task 8.3.1: Prepare HF Spaces Deployment
-**Time:** 30 minutes | **Difficulty:** â­â­ Medium
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **Directory:** `spaces/`
 
@@ -6418,7 +6418,7 @@ tree-sitter-javascript
 ```markdown
 ---
 title: FlagGuard
-emoji: ðŸš©
+emoji: Ã°Å¸Å¡Â©
 colorFrom: blue
 colorTo: purple
 sdk: gradio
@@ -6463,7 +6463,7 @@ huggingface-cli repo create flagguard --type space --space_sdk gradio
 # Clone and push
 cd spaces
 git init
-git remote add origin https://huggingface.co/spaces/YOUR_USERNAME/flagguard
+git remote add origin https://huggingface.co/spaces/laxmi2577/flagguard
 git add .
 git commit -m "Initial deployment"
 git push -u origin main
@@ -6474,29 +6474,29 @@ git push -u origin main
 ## 8.4 Documentation
 
 ### Task 8.4.1: Create README
-**Time:** 30 minutes | **Difficulty:** â­ Easy
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **File:** `README.md`
 
 ```markdown
-# ðŸš© FlagGuard
+# Ã°Å¸Å¡Â© FlagGuard
 
 **AI Feature Flag Conflict Analyzer**
 
 [![PyPI](https://img.shields.io/pypi/v/flagguard)](https://pypi.org/project/flagguard/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://github.com/yourusername/flagguard/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/flagguard/actions)
+[![Tests](https://github.com/laxmi2577/flagguard/actions/workflows/test.yml/badge.svg)](https://github.com/laxmi2577/flagguard/actions)
 
 FlagGuard detects conflicts, impossible states, and dead code in your feature flag configurations using SAT solving and static analysis.
 
-## ðŸŽ¯ The Problem
+## Ã°Å¸Å½Â¯ The Problem
 
 - Companies with 100+ feature flags face "flag debt"
-- Flags interact in unexpected waysâ€”enabling Flag A while Flag B is off may crash the app
+- Flags interact in unexpected waysÃ¢â‚¬â€enabling Flag A while Flag B is off may crash the app
 - Dead code behind never-enabled flags bloats the codebase
 - Knight Capital lost $440M partly due to a feature flag misconfiguration
 
-## âœ¨ Features
+## Ã¢Å“Â¨ Features
 
 - **Conflict Detection**: Find impossible flag combinations
 - **Dead Code Finder**: Identify unreachable code paths
@@ -6504,13 +6504,13 @@ FlagGuard detects conflicts, impossible states, and dead code in your feature fl
 - **LLM Explanations**: Plain English conflict descriptions
 - **CI Integration**: Block deploys with conflicts
 
-## ðŸ“¦ Installation
+## Ã°Å¸â€œÂ¦ Installation
 
 ```bash
 pip install flagguard
 ```
 
-## ðŸš€ Quick Start
+## Ã°Å¸Å¡â‚¬ Quick Start
 
 ```bash
 # Analyze your flags
@@ -6523,39 +6523,39 @@ flagguard parse --config flags.json
 flagguard graph --config flags.json --source ./src --output deps.mmd
 ```
 
-## ðŸ“– Supported Formats
+## Ã°Å¸â€œâ€“ Supported Formats
 
 | Platform | Format | Status |
 |----------|--------|--------|
-| LaunchDarkly | JSON | âœ… |
-| Unleash | YAML/JSON | âœ… |
-| Custom | JSON | âœ… |
+| LaunchDarkly | JSON | Ã¢Å“â€¦ |
+| Unleash | YAML/JSON | Ã¢Å“â€¦ |
+| Custom | JSON | Ã¢Å“â€¦ |
 
-## ðŸ”§ GitHub Action
+## Ã°Å¸â€Â§ GitHub Action
 
 ```yaml
-- uses: yourusername/flagguard@v1
+- uses: laxmi2577/flagguard@v1
   with:
     config-path: 'flags/config.json'
     source-path: 'src'
     fail-on-critical: 'true'
 ```
 
-## ðŸ–¥ï¸ Web Demo
+## Ã°Å¸â€“Â¥Ã¯Â¸Â Web Demo
 
-Try FlagGuard without installation: [HF Spaces Demo](https://huggingface.co/spaces/yourusername/flagguard)
+Try FlagGuard without installation: [HF Spaces Demo](https://huggingface.co/spaces/laxmi2577/flagguard)
 
-## ðŸ“š Documentation
+## Ã°Å¸â€œÅ¡ Documentation
 
 - [Full Documentation](https://flagguard.readthedocs.io)
 - [API Reference](docs/api.md)
 - [Examples](examples/)
 
-## ðŸ¤ Contributing
+## Ã°Å¸Â¤Â Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## ðŸ“„ License
+## Ã°Å¸â€œâ€ž License
 
 MIT License - see [LICENSE](LICENSE)
 ```
@@ -6563,7 +6563,7 @@ MIT License - see [LICENSE](LICENSE)
 ---
 
 ### Task 8.4.2: Create API Documentation
-**Time:** 45 minutes | **Difficulty:** â­â­ Medium
+**Time:** 45 minutes | **Difficulty:** Ã¢Â­ÂÃ¢Â­Â Medium
 
 **File:** `docs/api.md`
 
@@ -6692,27 +6692,27 @@ Options:
 ---
 
 ### Task 8.4.3: Create Examples
-**Time:** 30 minutes | **Difficulty:** â­ Easy
+**Time:** 30 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **Directory:** `examples/`
 
 ```
 examples/
-â”œâ”€â”€ basic/
-â”‚   â”œâ”€â”€ flags.json
-â”‚   â”œâ”€â”€ src/
-â”‚   â”‚   â””â”€â”€ app.py
-â”‚   â””â”€â”€ README.md
-â”œâ”€â”€ launchdarkly/
-â”‚   â”œâ”€â”€ export.json
-â”‚   â””â”€â”€ README.md
-â”œâ”€â”€ github-action/
-â”‚   â””â”€â”€ .github/
-â”‚       â””â”€â”€ workflows/
-â”‚           â””â”€â”€ flagguard.yml
-â””â”€â”€ python-sdk/
-    â”œâ”€â”€ example.py
-    â””â”€â”€ README.md
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ basic/
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ flags.json
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ src/
+Ã¢â€â€š   Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ app.py
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ README.md
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ launchdarkly/
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ export.json
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ README.md
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ github-action/
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ .github/
+Ã¢â€â€š       Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ workflows/
+Ã¢â€â€š           Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ flagguard.yml
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ python-sdk/
+    Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ example.py
+    Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ README.md
 ```
 
 ---
@@ -6720,7 +6720,7 @@ examples/
 ## 8.5 Post-Launch
 
 ### Task 8.5.1: Monitoring Setup
-**Time:** 15 minutes | **Difficulty:** â­ Easy
+**Time:** 15 minutes | **Difficulty:** Ã¢Â­Â Easy
 
 **GitHub repository settings:**
 - [ ] Enable Discussions for community support
@@ -6795,11 +6795,11 @@ body:
 
 | Threat | Likelihood | Impact | Risk Level |
 |--------|------------|--------|------------|
-| Malicious config injection | Low | Medium | ðŸŸ¡ Medium |
-| Path traversal in source scan | Low | High | ðŸŸ  High |
-| LLM prompt injection | Low | Low | ðŸŸ¢ Low |
-| Dependency vulnerabilities | Medium | Medium | ðŸŸ¡ Medium |
-| Information leakage in reports | Low | Medium | ðŸŸ¡ Medium |
+| Malicious config injection | Low | Medium | Ã°Å¸Å¸Â¡ Medium |
+| Path traversal in source scan | Low | High | Ã°Å¸Å¸Â  High |
+| LLM prompt injection | Low | Low | Ã°Å¸Å¸Â¢ Low |
+| Dependency vulnerabilities | Medium | Medium | Ã°Å¸Å¸Â¡ Medium |
+| Information leakage in reports | Low | Medium | Ã°Å¸Å¸Â¡ Medium |
 
 ### 1.2 Security Threats & Mitigations
 
@@ -6816,10 +6816,10 @@ body:
 ```
 
 **Mitigation:**
-- âœ… JSON/YAML parsers don't execute code by design
-- âœ… Use `json.loads()` and `yaml.safe_load()` only
-- âœ… Never use `eval()` or `exec()` on user input
-- âœ… Treat flag names as opaque strings
+- Ã¢Å“â€¦ JSON/YAML parsers don't execute code by design
+- Ã¢Å“â€¦ Use `json.loads()` and `yaml.safe_load()` only
+- Ã¢Å“â€¦ Never use `eval()` or `exec()` on user input
+- Ã¢Å“â€¦ Treat flag names as opaque strings
 
 **Verification:**
 ```python
@@ -6841,10 +6841,10 @@ flagguard analyze --source "../../../etc" --config flags.json
 ```
 
 **Mitigation:**
-- âœ… Resolve all paths to absolute paths
-- âœ… Verify source path is within allowed directories
-- âœ… Never follow symlinks outside source root
-- âœ… Skip sensitive files (`.env`, `*.key`, `*.pem`)
+- Ã¢Å“â€¦ Resolve all paths to absolute paths
+- Ã¢Å“â€¦ Verify source path is within allowed directories
+- Ã¢Å“â€¦ Never follow symlinks outside source root
+- Ã¢Å“â€¦ Skip sensitive files (`.env`, `*.key`, `*.pem`)
 
 **Implementation:**
 ```python
@@ -6875,10 +6875,10 @@ def _validate_source_path(self, root: Path, file_path: Path) -> bool:
 ```
 
 **Mitigation:**
-- âœ… LLM only used for explanation generation (not decisions)
-- âœ… User data clearly separated in prompts
-- âœ… Output is informational only, not executable
-- âœ… Fallback to non-LLM explanations if needed
+- Ã¢Å“â€¦ LLM only used for explanation generation (not decisions)
+- Ã¢Å“â€¦ User data clearly separated in prompts
+- Ã¢Å“â€¦ Output is informational only, not executable
+- Ã¢Å“â€¦ Fallback to non-LLM explanations if needed
 
 ---
 
@@ -6886,10 +6886,10 @@ def _validate_source_path(self, root: Path, file_path: Path) -> bool:
 **Description:** Third-party packages contain security issues.
 
 **Mitigation:**
-- âœ… Use Dependabot for automated updates
-- âœ… Pin major versions, allow minor/patch updates
-- âœ… Run `pip audit` in CI
-- âœ… Minimize dependencies
+- Ã¢Å“â€¦ Use Dependabot for automated updates
+- Ã¢Å“â€¦ Pin major versions, allow minor/patch updates
+- Ã¢Å“â€¦ Run `pip audit` in CI
+- Ã¢Å“â€¦ Minimize dependencies
 
 **GitHub Actions:**
 ```yaml
@@ -6905,10 +6905,10 @@ def _validate_source_path(self, root: Path, file_path: Path) -> bool:
 **Description:** Sensitive info (flag names, code paths) exposed in reports.
 
 **Mitigation:**
-- âœ… Reports only contain what user uploaded
-- âœ… No external API calls by default
-- âœ… Local-only processing option
-- âœ… Clear documentation on data handling
+- Ã¢Å“â€¦ Reports only contain what user uploaded
+- Ã¢Å“â€¦ No external API calls by default
+- Ã¢Å“â€¦ Local-only processing option
+- Ã¢Å“â€¦ Clear documentation on data handling
 
 ---
 
@@ -6961,10 +6961,10 @@ class AnalysisConfig:
 **Problem:** Scanning 1M+ LOC is slow
 
 **Mitigation:**
-- âœ… Parallel file processing
-- âœ… Skip non-code files
-- âœ… Configurable exclusions
-- âœ… Incremental scanning (cache parsed ASTs)
+- Ã¢Å“â€¦ Parallel file processing
+- Ã¢Å“â€¦ Skip non-code files
+- Ã¢Å“â€¦ Configurable exclusions
+- Ã¢Å“â€¦ Incremental scanning (cache parsed ASTs)
 
 ```python
 # Cache parsed results
@@ -6983,10 +6983,10 @@ def get_cached_usages(file_path: Path) -> list[FlagUsage] | None:
 **Problem:** Each LLM call takes 2-5 seconds
 
 **Mitigation:**
-- âœ… Only explain top 10 conflicts
-- âœ… Batch similar conflicts
-- âœ… Offline mode (skip LLM)
-- âœ… Cache explanations for identical conflicts
+- Ã¢Å“â€¦ Only explain top 10 conflicts
+- Ã¢Å“â€¦ Batch similar conflicts
+- Ã¢Å“â€¦ Offline mode (skip LLM)
+- Ã¢Å“â€¦ Cache explanations for identical conflicts
 
 ---
 
@@ -6996,10 +6996,10 @@ def get_cached_usages(file_path: Path) -> list[FlagUsage] | None:
 
 | Scenario | Current | Target | Strategy |
 |----------|---------|--------|----------|
-| Small repo (< 10K LOC) | âœ… Works | âœ… Works | Default config |
-| Medium repo (50K LOC) | âœ… Works | âœ… <60s | Parallel parsing |
-| Large repo (500K LOC) | âš ï¸ Slow | âœ… <5min | Incremental, caching |
-| Monorepo (1M+ LOC) | âŒ OOM | âš ï¸ Works | Sampling, limits |
+| Small repo (< 10K LOC) | Ã¢Å“â€¦ Works | Ã¢Å“â€¦ Works | Default config |
+| Medium repo (50K LOC) | Ã¢Å“â€¦ Works | Ã¢Å“â€¦ <60s | Parallel parsing |
+| Large repo (500K LOC) | Ã¢Å¡Â Ã¯Â¸Â Slow | Ã¢Å“â€¦ <5min | Incremental, caching |
+| Monorepo (1M+ LOC) | Ã¢ÂÅ’ OOM | Ã¢Å¡Â Ã¯Â¸Â Works | Sampling, limits |
 
 ### 3.2 Scalability Mitigations
 
@@ -7048,10 +7048,10 @@ For enterprise version:
 
 | Factor | tree-sitter | Python ast |
 |--------|-------------|------------|
-| Multi-language | âœ… Yes | âŒ Python only |
-| Speed | âœ… Fast | âš ï¸ Moderate |
-| Setup complexity | âš ï¸ Grammars needed | âœ… Built-in |
-| Error tolerance | âœ… Partial parse | âŒ All or nothing |
+| Multi-language | Ã¢Å“â€¦ Yes | Ã¢ÂÅ’ Python only |
+| Speed | Ã¢Å“â€¦ Fast | Ã¢Å¡Â Ã¯Â¸Â Moderate |
+| Setup complexity | Ã¢Å¡Â Ã¯Â¸Â Grammars needed | Ã¢Å“â€¦ Built-in |
+| Error tolerance | Ã¢Å“â€¦ Partial parse | Ã¢ÂÅ’ All or nothing |
 
 **Recommendation:** tree-sitter with Python ast fallback
 
@@ -7059,10 +7059,10 @@ For enterprise version:
 
 | Factor | Z3 | pysat |
 |--------|-----|-------|
-| Power | âœ… Full SMT | âš ï¸ SAT only |
-| Features | âœ… Many | âš ï¸ Basic |
-| Install ease | âš ï¸ Complex | âœ… Simple |
-| Performance | âœ… Optimized | âœ… Fast |
+| Power | Ã¢Å“â€¦ Full SMT | Ã¢Å¡Â Ã¯Â¸Â SAT only |
+| Features | Ã¢Å“â€¦ Many | Ã¢Å¡Â Ã¯Â¸Â Basic |
+| Install ease | Ã¢Å¡Â Ã¯Â¸Â Complex | Ã¢Å“â€¦ Simple |
+| Performance | Ã¢Å“â€¦ Optimized | Ã¢Å“â€¦ Fast |
 
 **Recommendation:** Z3 for full features, pysat as simple fallback
 
@@ -7070,10 +7070,10 @@ For enterprise version:
 
 | Factor | Ollama/Gemma | OpenAI API |
 |--------|--------------|------------|
-| Cost | âœ… Free | âŒ Pay per token |
-| Privacy | âœ… Local | âš ï¸ Data leaves machine |
-| Setup | âš ï¸ Install required | âœ… Just API key |
-| Quality | âš ï¸ Good | âœ… Best |
+| Cost | Ã¢Å“â€¦ Free | Ã¢ÂÅ’ Pay per token |
+| Privacy | Ã¢Å“â€¦ Local | Ã¢Å¡Â Ã¯Â¸Â Data leaves machine |
+| Setup | Ã¢Å¡Â Ã¯Â¸Â Install required | Ã¢Å“â€¦ Just API key |
+| Quality | Ã¢Å¡Â Ã¯Â¸Â Good | Ã¢Å“â€¦ Best |
 
 **Recommendation:** Ollama by default, OpenAI as premium option
 
@@ -7094,16 +7094,16 @@ For enterprise version:
 
 | Regulation | Applicability | Status |
 |------------|---------------|--------|
-| GDPR | Low (no PII) | âœ… Compliant |
-| SOC 2 | Medium (enterprise) | âš ï¸ Local deployment |
-| HIPAA | Low (no PHI) | âœ… N/A |
+| GDPR | Low (no PII) | Ã¢Å“â€¦ Compliant |
+| SOC 2 | Medium (enterprise) | Ã¢Å¡Â Ã¯Â¸Â Local deployment |
+| HIPAA | Low (no PHI) | Ã¢Å“â€¦ N/A |
 
 ### 5.3 Privacy Features
 
-- âœ… Offline-first design
-- âœ… No telemetry by default
-- âœ… No external API calls required
-- âœ… Air-gapped deployment supported
+- Ã¢Å“â€¦ Offline-first design
+- Ã¢Å“â€¦ No telemetry by default
+- Ã¢Å“â€¦ No external API calls required
+- Ã¢Å“â€¦ Air-gapped deployment supported
 
 ---
 
@@ -7536,7 +7536,7 @@ Summary:
   Conflicts found: 3
   Dead code blocks: 2
 
-âœ“ No critical issues found
+Ã¢Å“â€œ No critical issues found
 ```
 
 **Exit Codes:**
@@ -7559,13 +7559,13 @@ flagguard parse \
 
 **Output (table):**
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ Name             â”‚ Type    â”‚ Enabled â”‚ Dependencies â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚ new_checkout     â”‚ boolean â”‚ âœ“       â”‚ -            â”‚
-â”‚ premium_tier     â”‚ boolean â”‚ âœ“       â”‚ payment      â”‚
-â”‚ dark_mode        â”‚ boolean â”‚ âœ—       â”‚ -            â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+Ã¢â€Å’Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â
+Ã¢â€â€š Name             Ã¢â€â€š Type    Ã¢â€â€š Enabled Ã¢â€â€š Dependencies Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¼Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â¤
+Ã¢â€â€š new_checkout     Ã¢â€â€š boolean Ã¢â€â€š Ã¢Å“â€œ       Ã¢â€â€š -            Ã¢â€â€š
+Ã¢â€â€š premium_tier     Ã¢â€â€š boolean Ã¢â€â€š Ã¢Å“â€œ       Ã¢â€â€š payment      Ã¢â€â€š
+Ã¢â€â€š dark_mode        Ã¢â€â€š boolean Ã¢â€â€š Ã¢Å“â€”       Ã¢â€â€š -            Ã¢â€â€š
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Â´Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€Ëœ
 ```
 
 ---
@@ -8370,7 +8370,7 @@ If project needs to wind down:
 ## Appendix: Launch Announcement Template
 
 ```markdown
-# ðŸš© FlagGuard: Detect Feature Flag Conflicts Before They Hit Production
+# Ã°Å¸Å¡Â© FlagGuard: Detect Feature Flag Conflicts Before They Hit Production
 
 Hi everyone!
 
@@ -8385,11 +8385,11 @@ flag combinations were impossible - before they shipped.
 
 ## What It Does
 
-- ðŸ” **Conflict Detection**: Finds impossible flag combinations
-- ðŸ§Ÿ **Dead Code Finder**: Identifies unreachable code paths
-- ðŸ”— **Dependency Graph**: Visualizes flag relationships
-- ðŸ¤– **LLM Explanations**: Converts technical conflicts to plain English
-- ðŸ”„ **CI Integration**: Block deploys with conflicts
+- Ã°Å¸â€Â **Conflict Detection**: Finds impossible flag combinations
+- Ã°Å¸Â§Å¸ **Dead Code Finder**: Identifies unreachable code paths
+- Ã°Å¸â€â€” **Dependency Graph**: Visualizes flag relationships
+- Ã°Å¸Â¤â€“ **LLM Explanations**: Converts technical conflicts to plain English
+- Ã°Å¸â€â€ž **CI Integration**: Block deploys with conflicts
 
 ## Quick Demo
 
@@ -8400,9 +8400,9 @@ flagguard analyze --config flags.json --source ./src
 
 ## Links
 
-- ðŸ”— GitHub: https://github.com/yourusername/flagguard
-- ðŸ“¦ PyPI: https://pypi.org/project/flagguard/
-- ðŸ¤– Demo: https://huggingface.co/spaces/yourusername/flagguard
+- Ã°Å¸â€â€” GitHub: https://github.com/laxmi2577/flagguard
+- Ã°Å¸â€œÂ¦ PyPI: https://pypi.org/project/flagguard/
+- Ã°Å¸Â¤â€“ Demo: https://huggingface.co/spaces/laxmi2577/flagguard
 
 Feedback welcome! This is v0.1.0, so there's lots of room for improvement.
 ```

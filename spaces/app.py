@@ -1,4 +1,4 @@
-"""FlagGuard Gradio app for Hugging Face Spaces.
+﻿"""FlagGuard Gradio app for Hugging Face Spaces.
 
 Simplified version without LLM features for HF Spaces deployment.
 """
@@ -42,7 +42,7 @@ def analyze_flags(
         conflicts = detector.detect_all_conflicts()
         
         # Generate summary
-        status = "✅ No conflicts" if not conflicts else f"⚠️ {len(conflicts)} conflicts found"
+        status = "âœ… No conflicts" if not conflicts else f"âš ï¸ {len(conflicts)} conflicts found"
         summary = f"""## Analysis Results
 
 **Status:** {status}
@@ -80,7 +80,7 @@ with gr.Blocks(
     theme=gr.themes.Soft(),
 ) as app:
     gr.Markdown("""
-# 🚩 FlagGuard
+# ðŸš© FlagGuard
 ## AI Feature Flag Conflict Analyzer
 
 Upload your feature flag configuration to detect conflicts, impossible states, and dead code.
@@ -98,16 +98,16 @@ Upload your feature flag configuration to detect conflicts, impossible states, a
                 label="Source Code (ZIP) - Optional",
                 file_types=[".zip"],
             )
-            analyze_btn = gr.Button("🔍 Analyze", variant="primary")
+            analyze_btn = gr.Button("ðŸ” Analyze", variant="primary")
         
         with gr.Column(scale=2):
             summary_output = gr.Markdown(label="Summary")
     
     with gr.Tabs():
-        with gr.TabItem("📋 Report"):
+        with gr.TabItem("ðŸ“‹ Report"):
             report_output = gr.Markdown(label="Full Report")
         
-        with gr.TabItem("🔗 Dependency Graph"):
+        with gr.TabItem("ðŸ”— Dependency Graph"):
             graph_output = gr.Textbox(
                 label="Mermaid Diagram (Copy to mermaid.live)",
                 lines=15,
@@ -123,7 +123,7 @@ Upload your feature flag configuration to detect conflicts, impossible states, a
 ---
 **Install locally:** `pip install flagguard`
 
-[GitHub](https://github.com/yourusername/flagguard) | [PyPI](https://pypi.org/project/flagguard/)
+[GitHub](https://github.com/laxmi2577/flagguard) | [PyPI](https://pypi.org/project/flagguard/)
     """)
 
 

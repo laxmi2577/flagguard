@@ -1,4 +1,4 @@
-# FlagGuard User Guide
+﻿# FlagGuard User Guide
 
 This guide covers how to use FlagGuard to analyze your feature flag configurations and codebases.
 
@@ -32,7 +32,7 @@ uv pip install flagguard
 ### From source
 
 ```bash
-git clone https://github.com/yourusername/flagguard.git
+git clone https://github.com/laxmi2577/flagguard.git
 cd flagguard
 pip install -e ".[dev]"
 ```
@@ -63,9 +63,9 @@ flagguard analyze --config flags.json --source ./src
 ### 3. Review results
 
 FlagGuard will report:
-- ✅ Number of flags analyzed
-- ⚠️ Conflicts detected
-- 🔍 Dead code blocks found
+- âœ… Number of flags analyzed
+- âš ï¸ Conflicts detected
+- ðŸ” Dead code blocks found
 
 ---
 
@@ -167,10 +167,10 @@ flagguard check-llm
 ```
 
 **Severity Levels:**
-- 🔴 **CRITICAL**: Production will break
-- 🟠 **HIGH**: Significant issue
-- 🟡 **MEDIUM**: Should be addressed
-- 🟢 **LOW**: Minor concern
+- ðŸ”´ **CRITICAL**: Production will break
+- ðŸŸ  **HIGH**: Significant issue
+- ðŸŸ¡ **MEDIUM**: Should be addressed
+- ðŸŸ¢ **LOW**: Minor concern
 
 ### Dead Code Report
 
@@ -272,7 +272,7 @@ For AI explanations, install and run Ollama:
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/yourusername/flagguard/issues)
+- [GitHub Issues](https://github.com/laxmi2577/flagguard/issues)
 - [Documentation](https://flagguard.readthedocs.io)
 - [Examples](../examples/)
 

@@ -1,24 +1,24 @@
-# FlagGuard Support
+﻿# FlagGuard Support
 
 ## Getting Help
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - [README](README.md) - Quick start guide
 - [API Documentation](docs/api.md) - Detailed API reference
 - [Examples](examples/) - Example configurations and code
 
-### 💬 Community
-- [GitHub Discussions](https://github.com/yourusername/flagguard/discussions) - Ask questions and share ideas
-- [GitHub Issues](https://github.com/yourusername/flagguard/issues) - Report bugs and request features
+### ðŸ’¬ Community
+- [GitHub Discussions](https://github.com/laxmi2577/flagguard/discussions) - Ask questions and share ideas
+- [GitHub Issues](https://github.com/laxmi2577/flagguard/issues) - Report bugs and request features
 
-### 🐛 Bug Reports
+### ðŸ› Bug Reports
 Before submitting a bug report:
-1. Check [existing issues](https://github.com/yourusername/flagguard/issues)
+1. Check [existing issues](https://github.com/laxmi2577/flagguard/issues)
 2. Include FlagGuard version (`flagguard --version`)
 3. Provide minimal reproduction steps
 4. Share your configuration (anonymized if needed)
 
-### 🔒 Security Issues
+### ðŸ”’ Security Issues
 For security vulnerabilities, please see [SECURITY.md](SECURITY.md).
 **Do NOT open public issues for security problems.**
 
@@ -65,4 +65,4 @@ pip install tree-sitter tree-sitter-python tree-sitter-javascript
 ## Professional Support
 
 For enterprise support, custom integrations, or training:
-- Email: [your-email@example.com]
+- Email: laxmiranjan444@gmail.com

@@ -1,8 +1,8 @@
-# FlagGuard Roadmap
+﻿# FlagGuard Roadmap
 
 ## Current Version: 0.1.0
 
-### ✅ Completed Features
+### âœ… Completed Features
 - SAT-based conflict detection
 - Dead code detection
 - LaunchDarkly/Unleash parsers
@@ -72,7 +72,7 @@ Want to help with a roadmap item?
 
 Have an idea not on the roadmap?
 
-1. Open a [Feature Request](https://github.com/yourusername/flagguard/issues/new?template=feature_request.yml)
+1. Open a [Feature Request](https://github.com/laxmi2577/flagguard/issues/new?template=feature_request.yml)
 2. Describe the problem it solves
 3. Propose a solution
 4. Community votes help prioritize!

@@ -1,6 +1,6 @@
----
+﻿---
 title: FlagGuard
-emoji: 🚩
+emoji: ðŸš©
 colorFrom: blue
 colorTo: purple
 sdk: gradio
@@ -38,5 +38,5 @@ flagguard analyze --config flags.json --source ./src
 
 ## Links
 
-- [GitHub Repository](https://github.com/yourusername/flagguard)
+- [GitHub Repository](https://github.com/laxmi2577/flagguard)
 - [PyPI Package](https://pypi.org/project/flagguard/)

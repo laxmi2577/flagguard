@@ -1,4 +1,4 @@
-# Security Policy
+﻿# Security Policy
 
 ## Supported Versions
 
@@ -11,29 +11,29 @@
 FlagGuard is designed with security in mind:
 
 ### Input Handling
-- ✅ JSON/YAML parsing uses `json.loads()` and `yaml.safe_load()` only
-- ✅ No `eval()` or `exec()` on user input
-- ✅ Flag names treated as opaque strings (never executed)
-- ✅ Path traversal protection in source scanning
+- âœ… JSON/YAML parsing uses `json.loads()` and `yaml.safe_load()` only
+- âœ… No `eval()` or `exec()` on user input
+- âœ… Flag names treated as opaque strings (never executed)
+- âœ… Path traversal protection in source scanning
 
 ### Data Privacy
-- ✅ **Offline-first**: All processing happens locally
-- ✅ **No telemetry**: No data sent to external servers
-- ✅ **No storage**: Source code is never persisted
-- ✅ **Air-gapped**: Works without internet connection
+- âœ… **Offline-first**: All processing happens locally
+- âœ… **No telemetry**: No data sent to external servers
+- âœ… **No storage**: Source code is never persisted
+- âœ… **Air-gapped**: Works without internet connection
 
 ### LLM Security
-- ✅ LLM features are optional
-- ✅ User data clearly separated in prompts
-- ✅ LLM output is informational only
-- ✅ Local LLM (Ollama) by default
+- âœ… LLM features are optional
+- âœ… User data clearly separated in prompts
+- âœ… LLM output is informational only
+- âœ… Local LLM (Ollama) by default
 
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please:
 
 1. **DO NOT** open a public issue
-2. Email security concerns to: [your-email@example.com]
+2. Email security concerns to: laxmiranjan444@gmail.com
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

@@ -1,12 +1,12 @@
-# Contributing to FlagGuard
+﻿# Contributing to FlagGuard
 
-Thank you for your interest in contributing to FlagGuard! 🎉
+Thank you for your interest in contributing to FlagGuard! ðŸŽ‰
 
 ## Development Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/flagguard.git
+git clone https://github.com/laxmi2577/flagguard.git
 cd flagguard
 
 # Install uv (if not already installed)
@@ -88,7 +88,7 @@ Please read [SECURITY.md](SECURITY.md) before contributing security-related chan
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/yourusername/flagguard/discussions)
-- Check existing [Issues](https://github.com/yourusername/flagguard/issues)
+- Open a [Discussion](https://github.com/laxmi2577/flagguard/discussions)
+- Check existing [Issues](https://github.com/laxmi2577/flagguard/issues)
 
-Thank you for contributing! 🚩
+Thank you for contributing! ðŸš©
