@@ -1,0 +1,244 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://flagguard.dev/schemas/report.json",
+    "title": "FlagGuard Analysis Report",
+    "description": "Schema for FlagGuard JSON analysis reports",
+    "type": "object",
+    "required": [
+        "metadata",
+        "summary",
+        "conflicts"
+    ],
+    "properties": {
+        "metadata": {
+            "type": "object",
+            "description": "Analysis metadata",
+            "required": [
+                "timestamp",
+                "config_file",
+                "source_path"
+            ],
+            "properties": {
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp of analysis"
+                },
+                "config_file": {
+                    "type": "string",
+                    "description": "Path to configuration file"
+                },
+                "source_path": {
+                    "type": "string",
+                    "description": "Path to source directory"
+                },
+                "duration_seconds": {
+                    "type": "number",
+                    "description": "Analysis duration in seconds"
+                },
+                "flagguard_version": {
+                    "type": "string",
+                    "description": "FlagGuard version used"
+                }
+            }
+        },
+        "summary": {
+            "type": "object",
+            "description": "Analysis summary",
+            "required": [
+                "flags_analyzed",
+                "conflicts_total",
+                "pass"
+            ],
+            "properties": {
+                "flags_analyzed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of flags analyzed"
+                },
+                "files_scanned": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of source files scanned"
+                },
+                "conflicts_total": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Total number of conflicts"
+                },
+                "conflicts_critical": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of critical conflicts"
+                },
+                "dead_code_blocks": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of dead code blocks"
+                },
+                "pass": {
+                    "type": "boolean",
+                    "description": "True if no critical issues"
+                }
+            }
+        },
+        "conflicts": {
+            "type": "array",
+            "description": "List of detected conflicts",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "flags_involved",
+                    "severity",
+                    "reason"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique conflict ID"
+                    },
+                    "flags_involved": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "List of conflicting flag names"
+                    },
+                    "conflicting_values": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        },
+                        "description": "The impossible flag state"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "critical",
+                            "high",
+                            "medium",
+                            "low"
+                        ],
+                        "description": "Conflict severity level"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Technical explanation"
+                    },
+                    "affected_locations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "File:line locations affected"
+                    },
+                    "explanation": {
+                        "type": "string",
+                        "description": "LLM-generated explanation (if enabled)"
+                    }
+                }
+            }
+        },
+        "dead_code": {
+            "type": "array",
+            "description": "List of dead code blocks",
+            "items": {
+                "type": "object",
+                "required": [
+                    "file_path",
+                    "start_line",
+                    "end_line",
+                    "reason"
+                ],
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to file containing dead code"
+                    },
+                    "start_line": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Start line number"
+                    },
+                    "end_line": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "End line number"
+                    },
+                    "required_flags": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        },
+                        "description": "Flag state required to reach code"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Why code is unreachable"
+                    },
+                    "estimated_lines": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Number of lines in block"
+                    }
+                }
+            }
+        },
+        "dependencies": {
+            "type": "array",
+            "description": "Flag dependency relationships",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "requires",
+                            "conflicts_with",
+                            "implies"
+                        ]
+                    },
+                    "source_type": {
+                        "type": "string",
+                        "enum": [
+                            "explicit",
+                            "inferred"
+                        ]
+                    }
+                }
+            }
+        },
+        "always_true_flags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Flags that must always be true"
+        },
+        "always_false_flags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Flags that must always be false"
+        },
+        "unused_flags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Flags defined but never used"
+        },
+        "executive_summary": {
+            "type": "string",
+            "description": "LLM-generated executive summary"
+        }
+    }
+}
