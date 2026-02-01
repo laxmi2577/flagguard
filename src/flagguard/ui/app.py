@@ -242,7 +242,17 @@ def format_conflicts_with_colors(conflicts: list) -> str:
     lines = ["## Conflicts\n"]
     
     for conflict in conflicts:
-        severity = conflict.severity.upper() if hasattr(conflict, 'severity') else "MEDIUM"
+        # Handle severity as enum or string
+        if hasattr(conflict, 'severity'):
+            sev = conflict.severity
+            if hasattr(sev, 'value'):
+                severity = str(sev.value).upper()
+            elif hasattr(sev, 'name'):
+                severity = sev.name.upper()
+            else:
+                severity = str(sev).upper()
+        else:
+            severity = "MEDIUM"
         badge = get_severity_badge(severity)
         
         flags = ", ".join(f"`{f}`" for f in conflict.flags_involved)
