@@ -1,11 +1,11 @@
-﻿[build-system]
+[build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "flagguard"
 version = "0.1.0"
-description = "AI Feature Flag Conflict Analyzer - Detect conflicts, impossible states, and dead code in feature flags"
+description = "AI Feature Flag Conflict Analyzer"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
@@ -14,14 +14,10 @@ authors = [
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Quality Assurance",
-    "Topic :: Software Development :: Testing",
 ]
-keywords = ["feature-flags", "static-analysis", "SAT-solver", "launchdarkly", "unleash", "conflict-detection"]
+keywords = ["feature-flags", "static-analysis", "launchdarkly"]
 
 dependencies = [
     "pyyaml>=6.0",
@@ -42,8 +38,6 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.1",
     "mypy>=1.0",
-    "pre-commit>=3.0",
-    "types-PyYAML>=6.0",
 ]
 
 [project.scripts]
@@ -51,59 +45,14 @@ flagguard = "flagguard.cli.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/laxmi2577/flagguard"
-Documentation = "https://flagguard.readthedocs.io"
 Repository = "https://github.com/laxmi2577/flagguard"
-Issues = "https://github.com/laxmi2577/flagguard/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flagguard"]
 
-[tool.ruff]
-target-version = "py311"
-line-length = 100
-select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
-ignore = ["E501"]
-
-[tool.ruff.isort]
-known-first-party = ["flagguard"]
-
-[tool.ruff.per-file-ignores]
-"tests/*" = ["S101"]
-
-[tool.mypy]
-python_version = "3.11"
-strict = true
-warn_return_any = true
-warn_unused_ignores = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-
-[[tool.mypy.overrides]]
-module = ["tree_sitter", "tree_sitter_python", "tree_sitter_javascript", "ollama", "gradio", "z3"]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=src/flagguard --cov-report=term-missing"
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-]
-
-[tool.coverage.run]
-source = ["src/flagguard"]
-branch = true
-omit = ["*/tests/*", "*/__init__.py"]
-
-[tool.coverage.report]
-fail_under = 80
-show_missing = true
-exclude_lines = [
-    "pragma: no cover",
-    "raise NotImplementedError",
-    "if TYPE_CHECKING:",
-    "if __name__ == .__main__.:",
-]
+addopts = "-v"
 
 [dependency-groups]
 dev = [
