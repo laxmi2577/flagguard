@@ -1,0 +1,155 @@
+{
+    "name": "flagguard-vscode",
+    "displayName": "FlagGuard - Feature Flag Analyzer",
+    "description": "Real-time feature flag conflict detection and dead code analysis",
+    "version": "0.1.0",
+    "publisher": "laxmi2577",
+    "license": "MIT",
+    "icon": "resources/icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/laxmi2577/flagguard"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Linters",
+        "Other"
+    ],
+    "keywords": [
+        "feature-flags",
+        "launchdarkly",
+        "unleash",
+        "static-analysis",
+        "conflict-detection"
+    ],
+    "activationEvents": [
+        "workspaceContains:**/flags.json",
+        "workspaceContains:**/.flagguard.yaml",
+        "onLanguage:python",
+        "onLanguage:javascript",
+        "onLanguage:typescript"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "flagguard.analyze",
+                "title": "FlagGuard: Analyze Workspace"
+            },
+            {
+                "command": "flagguard.viewReport",
+                "title": "FlagGuard: View Analysis Report"
+            },
+            {
+                "command": "flagguard.configure",
+                "title": "FlagGuard: Configure"
+            },
+            {
+                "command": "flagguard.clearDiagnostics",
+                "title": "FlagGuard: Clear Diagnostics"
+            }
+        ],
+        "configuration": {
+            "title": "FlagGuard",
+            "properties": {
+                "flagguard.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable FlagGuard analysis"
+                },
+                "flagguard.configPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to flag configuration file (auto-detected if empty)"
+                },
+                "flagguard.analyzeOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run analysis when files are saved"
+                },
+                "flagguard.pythonPath": {
+                    "type": "string",
+                    "default": "python",
+                    "description": "Path to Python executable with FlagGuard installed"
+                },
+                "flagguard.showStatusBar": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show FlagGuard status in status bar"
+                },
+                "flagguard.severity.critical": {
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "warning",
+                        "information",
+                        "hint"
+                    ],
+                    "default": "error",
+                    "description": "Diagnostic severity for critical conflicts"
+                },
+                "flagguard.severity.high": {
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "warning",
+                        "information",
+                        "hint"
+                    ],
+                    "default": "error",
+                    "description": "Diagnostic severity for high conflicts"
+                },
+                "flagguard.severity.medium": {
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "warning",
+                        "information",
+                        "hint"
+                    ],
+                    "default": "warning",
+                    "description": "Diagnostic severity for medium conflicts"
+                },
+                "flagguard.severity.low": {
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "warning",
+                        "information",
+                        "hint"
+                    ],
+                    "default": "information",
+                    "description": "Diagnostic severity for low conflicts"
+                }
+            }
+        },
+        "languages": [
+            {
+                "id": "flagguard-config",
+                "aliases": [
+                    "FlagGuard Config"
+                ],
+                "filenames": [
+                    ".flagguard.yaml",
+                    ".flagguard.yml"
+                ]
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src --ext ts",
+        "package": "vsce package",
+        "publish": "vsce publish"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "@types/vscode": "^1.85.0",
+        "@vscode/vsce": "^2.22.0",
+        "typescript": "^5.3.0"
+    }
+}
