@@ -24,14 +24,17 @@ app = FastAPI(
     description=(
         "Enterprise Feature Flag Intelligence Platform.\n\n"
         "**Features:**\n"
-        "- 🔍 Parse & analyze flag configurations\n"
-        "- ⚡ SAT-solver conflict detection\n"
-        "- 🌍 Multi-environment support\n"
-        "- 🔐 Role-based access (admin/analyst/viewer)\n"
-        "- 🪝 Webhook notifications\n"
-        "- 📊 Audit trail & compliance\n"
+        "- Parse & analyze flag configurations\n"
+        "- SAT-solver conflict detection\n"
+        "- Multi-environment support with drift detection\n"
+        "- Role-based access (admin/analyst/viewer)\n"
+        "- Webhook notifications (HMAC-signed)\n"
+        "- Audit trail & compliance\n"
+        "- Flag lifecycle management (staleness, zombie detection)\n"
+        "- Scheduled scanning & CI/CD gate checks\n"
+        "- Python SDK\n"
     ),
-    version="2.0.0",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -53,6 +56,9 @@ from flagguard.api.scans import router as scans_router
 from flagguard.api.flags import router as flags_router
 from flagguard.api.environments import router as environments_router
 from flagguard.api.webhooks import router as webhooks_router
+from flagguard.api.audit import router as audit_router
+from flagguard.api.lifecycle import router as lifecycle_router
+from flagguard.api.scheduler import router as scheduler_router
 
 # All routes prefixed with /api/v1
 app.include_router(auth_router, prefix="/api/v1")
@@ -61,6 +67,9 @@ app.include_router(scans_router, prefix="/api/v1")
 app.include_router(flags_router, prefix="/api/v1")
 app.include_router(environments_router, prefix="/api/v1")
 app.include_router(webhooks_router, prefix="/api/v1")
+app.include_router(audit_router, prefix="/api/v1")
+app.include_router(lifecycle_router, prefix="/api/v1")
+app.include_router(scheduler_router, prefix="/api/v1")
 
 
 # --- Health Check ---
@@ -70,7 +79,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "FlagGuard API",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "docs": "/docs"
     }
 
