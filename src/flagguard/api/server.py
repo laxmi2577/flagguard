@@ -59,6 +59,10 @@ from flagguard.api.webhooks import router as webhooks_router
 from flagguard.api.audit import router as audit_router
 from flagguard.api.lifecycle import router as lifecycle_router
 from flagguard.api.scheduler import router as scheduler_router
+from flagguard.api.analytics import router as analytics_router
+from flagguard.api.reports import router as reports_router
+from flagguard.api.plugins import router as plugins_router
+from flagguard.api.iac import router as iac_router
 
 # All routes prefixed with /api/v1
 app.include_router(auth_router, prefix="/api/v1")
@@ -70,6 +74,10 @@ app.include_router(webhooks_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(lifecycle_router, prefix="/api/v1")
 app.include_router(scheduler_router, prefix="/api/v1")
+app.include_router(analytics_router, prefix="/api/v1")
+app.include_router(reports_router, prefix="/api/v1")
+app.include_router(plugins_router, prefix="/api/v1")
+app.include_router(iac_router, prefix="/api/v1")
 
 
 # --- Health Check ---
