@@ -6,7 +6,7 @@ Identifies impossible flag combinations and dependency violations.
 import uuid
 from typing import TYPE_CHECKING
 
-from flagguard.core.models import Conflict, ConflictSeverity, FlagDefinition
+from flagguard.core.models import Conflict, ConflictSeverity, ConflictType, FlagDefinition
 from flagguard.core.logging import get_logger
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ class ConflictDetector:
         """
         self.solver = solver
         self._conflicts: list[Conflict] = []
+        self._loaded_flags: list[FlagDefinition] = []
     
     def load_flags(self, flags: list[FlagDefinition]) -> None:
         """Load flag definitions and encode constraints.
@@ -42,45 +43,105 @@ class ConflictDetector:
         Args:
             flags: List of flag definitions to analyze
         """
+        self._loaded_flags = flags
         for flag in flags:
             # Register the flag
             self.solver.get_or_create_var(flag.name)
             
             # Add enabled/disabled constraint
-            if not flag.enabled:
-                self.solver.add_always_off(flag.name)
+            # NOTE: We DO NOT force the current value here as a constraint,
+            # because we want to check if the current value *violates* the rules.
+            # If we forced it, the solver would just be UNSAT for the whole system
+            # and we couldn't isolate the specific conflict.
+            # We ONLY add "Infrastructure Constraints" (like dependencies).
             
             # Add dependency constraints
             for dep in flag.dependencies:
                 self.solver.add_requires(flag.name, dep)
             
+            # Add conflict constraints (Mutual Exclusion)
+            for conflict_flag in flag.conflicts:
+                self.solver.add_conflicts(flag.name, conflict_flag)
+
             logger.debug(f"Loaded flag: {flag.name} (enabled={flag.enabled})")
-    
+
     def detect_all_conflicts(
         self,
         max_flags_per_conflict: int = 2,
     ) -> list[Conflict]:
-        """Detect all conflicts in the loaded flags.
+        """Detect conflicts in the CURRENT configuration.
+        
+        Verifies that the currently enabled/disabled states of flags
+        do not violate any constraints.
         
         Args:
-            max_flags_per_conflict: Max flags to combine per check
+            max_flags_per_conflict: Max flags to combine per check (default 2)
             
         Returns:
-            List of detected conflicts
+            List of detected conflicts/issues
         """
         self._conflicts.clear()
         
-        # Get impossible states
-        impossible_states = self.solver.get_impossible_states(
-            self.solver.variables,
-            max_flags_per_conflict,
-        )
+        # Create lookup map
+        flags_map = {f.name: f for f in self._loaded_flags}
         
-        for state in impossible_states:
-            conflict = self._create_conflict(state)
-            self._conflicts.append(conflict)
+        # 1. Check for Dependency Violations
+        # Rule: If Flag A is Enabled, and Flag A depends on Flag B, then Flag B must be Enabled.
+        for flag in self._loaded_flags:
+            if not flag.enabled:
+                continue
+                
+            for dep_name in flag.dependencies:
+                dep_flag = flags_map.get(dep_name)
+                # If dependency doesn't exist or is disabled -> Violation
+                if not dep_flag or not dep_flag.enabled:
+                    state = {
+                        flag.name: True,
+                        dep_name: False  # The problematic state
+                    }
+                    
+                    self._conflicts.append(Conflict(
+                        conflict_id=f"D{uuid.uuid4().hex[:6].upper()}",
+                        flags_involved=[flag.name, dep_name],
+                        conflicting_values=state,
+                        severity=ConflictSeverity.HIGH,
+                        conflict_type=ConflictType.DEPENDENCY_VIOLATION,
+                        reason=f"Flag '{flag.name}' is enabled but depends on '{dep_name}' which is disabled or missing."
+                    ))
+
+        # 2. Check for Mutual Exclusion Conflicts
+        # Rule: If Flag A matches Flag B in conflict list, they cannot BOTH be Enabled.
+        checked_pairs = set()
         
-        logger.info(f"Detected {len(self._conflicts)} conflicts")
+        for flag in self._loaded_flags:
+            if not flag.enabled:
+                continue
+                
+            for conflict_name in flag.conflicts:
+                conflict_flag = flags_map.get(conflict_name)
+                
+                if conflict_flag and conflict_flag.enabled:
+                    # Prevent reporting (A, B) and (B, A) twice
+                    pair_key = frozenset([flag.name, conflict_name])
+                    if pair_key in checked_pairs:
+                        continue
+                    checked_pairs.add(pair_key)
+                    
+                    state = {
+                        flag.name: True,
+                        conflict_name: True
+                    }
+                    
+                    self._conflicts.append(Conflict(
+                        conflict_id=f"C{uuid.uuid4().hex[:6].upper()}",
+                        flags_involved=[flag.name, conflict_name],
+                        conflicting_values=state,
+                        severity=ConflictSeverity.CRITICAL,
+                        conflict_type=ConflictType.MUTUAL_EXCLUSION,
+                        reason=f"Flags '{flag.name}' and '{conflict_name}' are both enabled but are mutually exclusive."
+                    ))
+        
+        logger.info(f"Detected {len(self._conflicts)} issues")
         return self._conflicts
     
     def _create_conflict(self, state: dict[str, bool]) -> Conflict:

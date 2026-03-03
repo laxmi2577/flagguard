@@ -1,13 +1,12 @@
-"""Enhanced Gradio Web UI for FlagGuard.
+"""FlagGuard Enterprise — Liquid Glass Edition.
 
 Features:
-- Interactive Dependency Graph
-- Real-time Analysis Progress
-- Syntax-highlighted Code Viewer
-- Conflict Severity Color Coding
-- Export Report as PDF
-- Drag-and-Drop File Zone
-- History of Past Analyses
+- Royal Obsidian Theme (Black/Gold/Silver)
+- Liquid Glass Effects (Frosted panels, Refraction, Shimmer)
+- Premium Typography (Outfit + Inter)
+- Gold/Emerald Chart Palette
+- Floating Orb Login Concept
+- Enterprise-Grade Professional Interface
 """
 
 import json
@@ -17,308 +16,606 @@ from pathlib import Path
 from typing import Any, Generator
 import base64
 import tempfile
+import io
+import uuid
 
 import gradio as gr
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    import pandas as pd
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    print("Warning: Plotly not found. Charts will be disabled.")
 
 from flagguard import __version__
+from flagguard.core.models import ConflictType
+from flagguard.ui.tabs.chat import create_chat_tab
 
 
 # History storage path
 HISTORY_FILE = Path.home() / ".flagguard" / "analysis_history.json"
 
+# --- LIQUID GLASS THEME (Royal Obsidian) ---
 
-# Custom CSS for enhanced styling
-CUSTOM_CSS = """
-/* Severity color coding */
-.severity-critical { 
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85em;
-}
-.severity-high { 
-    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85em;
-}
-.severity-medium { 
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85em;
-}
-.severity-low { 
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 0.85em;
+LIQUID_GLASS_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+    /* Royal Obsidian Palette */
+    --bg-deep: #0f0f0f;
+    --bg-surface: #1a1a1a;
+    --bg-elevated: #222222;
+    --gold-primary: #d4af37;
+    --gold-light: #f59e0b;
+    --gold-dim: #92702a;
+    --platinum: #e2e8f0;
+    --platinum-dim: #94a3b8;
+    --emerald: #30d158;
+    --emerald-dim: #22a847;
+    --crimson: #dc2626;
+    --crimson-dim: #991b1b;
+
+    /* Glass Materials */
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-hover: rgba(255, 255, 255, 0.06);
+    --glass-blur: 20px;
+
+    /* Typography */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Drag and drop zone styling */
-.upload-zone {
-    border: 2px dashed var(--border-color-primary) !important;
-    border-radius: 12px !important;
-    transition: all 0.3s ease !important;
-}
-.upload-zone:hover {
-    border-color: var(--primary-500) !important;
-    background: var(--background-fill-secondary) !important;
+/* === BASE === */
+body, .gradio-container {
+    background: linear-gradient(160deg, var(--bg-deep) 0%, #111111 40%, var(--bg-surface) 100%) !important;
+    color: var(--platinum) !important;
+    font-family: var(--font-body) !important;
 }
 
-/* History card */
-.history-item {
-    background: var(--background-fill-secondary);
-    border: 1px solid var(--border-color-primary);
-    border-radius: 8px;
-    padding: 12px;
-    margin: 8px 0;
-    cursor: pointer;
-    transition: all 0.2s ease;
+/* === GLASS CARD === */
+.glass-card {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(var(--glass-blur)) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+    padding: 24px !important;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
-.history-item:hover {
-    border-color: var(--primary-500);
+
+.glass-card:hover {
+    background: var(--glass-hover) !important;
+    border-color: rgba(212, 175, 55, 0.15) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(212, 175, 55, 0.05);
     transform: translateY(-2px);
 }
 
-/* Code viewer enhancements */
-.code-viewer {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-    font-size: 13px !important;
+/* === SHIMMER BORDER (ANIMATED) === */
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
 
-/* Conflict card styling */
-.conflict-card {
-    border-left: 4px solid;
-    padding: 12px 16px;
-    margin: 8px 0;
-    border-radius: 0 8px 8px 0;
-    background: var(--background-fill-secondary);
+.shimmer-border {
+    position: relative;
+    border: none !important;
+    overflow: hidden;
 }
-.conflict-critical { border-color: #dc2626; }
-.conflict-high { border-color: #ea580c; }
-.conflict-medium { border-color: #d97706; }
-.conflict-low { border-color: #16a34a; }
+
+.shimmer-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(212,175,55,0.0) 25%,
+        rgba(212,175,55,0.3) 50%,
+        rgba(212,175,55,0.0) 75%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 4s linear infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* === METRIC DISPLAY === */
+.metric-card {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    text-align: center;
+    backdrop-filter: blur(16px) !important;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    border-color: rgba(212,175,55,0.2) !important;
+}
+
+.metric-value {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--gold-primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.metric-label {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--platinum-dim);
+    margin-top: 8px;
+}
+
+/* === GLASS BUTTON === */
+.glass-btn {
+    background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%) !important;
+    border: 1px solid rgba(212,175,55,0.3) !important;
+    border-radius: 10px !important;
+    padding: 12px 24px !important;
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.05em !important;
+    color: var(--gold-primary) !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    text-transform: uppercase !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-btn:hover {
+    background: linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.1) 100%) !important;
+    border-color: rgba(212,175,55,0.5) !important;
+    box-shadow: 0 4px 20px rgba(212,175,55,0.15) !important;
+    transform: translateY(-1px) !important;
+}
+
+.glass-btn:active {
+    transform: translateY(0) !important;
+}
+
+/* === FROSTED SIDEBAR === */
+.frosted-sidebar {
+    background: rgba(255,255,255,0.02) !important;
+    border-right: 1px solid var(--glass-border) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    padding: 24px 16px !important;
+    min-height: 100vh;
+}
+
+.sidebar-section {
+    margin-bottom: 24px;
+}
+
+.sidebar-title {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(212,175,55,0.1);
+}
+
+/* === HEADER === */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.01);
+    backdrop-filter: blur(16px);
+}
+
+.brand-text {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.05em;
+}
+
+.brand-subtitle {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--platinum-dim);
+    letter-spacing: 0.1em;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 8px rgba(48,209,88,0.4);
+    margin-right: 6px;
+}
+
+/* === FLOATING ORB (LOGIN BG) === */
+@keyframes orbFloat {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    33%      { transform: translate(-48%, -52%) scale(1.05); }
+    66%      { transform: translate(-52%, -48%) scale(0.95); }
+}
+
+@keyframes orbGlow {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.6; }
+}
+
+.login-bg {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.login-bg::before {
+    content: '';
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        rgba(212,175,55,0.15) 0%,
+        rgba(212,175,55,0.05) 40%,
+        transparent 70%
+    );
+    filter: blur(60px);
+    animation: orbFloat 8s ease-in-out infinite, orbGlow 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.login-card {
+    background: var(--glass-bg) !important;
+    border: 1px solid rgba(212,175,55,0.15) !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(30px) !important;
+    -webkit-backdrop-filter: blur(30px) !important;
+    padding: 40px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.login-logo {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 24px;
+    background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    box-shadow: 0 4px 20px rgba(212,175,55,0.2);
+}
+
+.login-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(135deg, var(--platinum), #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+}
+
+.login-subtitle {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--platinum-dim);
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+/* === AI TOGGLE === */
+.ai-toggle-container {
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+}
+
+.ai-toggle-on {
+    background: rgba(48,209,88,0.08) !important;
+    border: 1px solid rgba(48,209,88,0.2) !important;
+    color: var(--emerald) !important;
+}
+
+.ai-toggle-off {
+    background: rgba(148,163,184,0.05) !important;
+    border: 1px solid rgba(148,163,184,0.1) !important;
+    color: var(--platinum-dim) !important;
+}
+
+/* === GRADIO OVERRIDES === */
+button {
+    background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04)) !important;
+    border: 1px solid rgba(212,175,55,0.2) !important;
+    border-radius: 10px !important;
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    color: var(--gold-primary) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    font-size: 0.8rem !important;
+}
+
+button:hover {
+    background: linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.08)) !important;
+    border-color: rgba(212,175,55,0.4) !important;
+    box-shadow: 0 4px 16px rgba(212,175,55,0.1) !important;
+}
+
+input, textarea, select, .gr-input {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px !important;
+    color: var(--platinum) !important;
+    font-family: var(--font-body) !important;
+}
+
+input:focus, textarea:focus {
+    border-color: rgba(212,175,55,0.3) !important;
+    box-shadow: 0 0 0 3px rgba(212,175,55,0.08) !important;
+}
+
+label, .gr-form label {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    color: var(--platinum-dim) !important;
+}
+
+.tabs > .tab-nav > button {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.tabs > .tab-nav > button.selected {
+    border-bottom: 2px solid var(--gold-primary) !important;
+    color: var(--gold-primary) !important;
+}
+
+/* === FOOTER === */
+footer {
+    background: rgba(15,15,15,0.8) !important;
+    border-top: 1px solid var(--glass-border) !important;
+    backdrop-filter: blur(16px) !important;
+    padding: 12px 24px !important;
+}
+
+footer a, footer span {
+    color: var(--platinum-dim) !important;
+    font-family: var(--font-body) !important;
+    font-size: 0.75rem !important;
+}
+
+/* === MERMAID CODE PANEL === */
+.mermaid-code-section textarea {
+    font-size: 0.8rem !important;
+    line-height: 1.6 !important;
+    background: rgba(0,0,0,0.3) !important;
+    color: var(--emerald) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px !important;
+    font-family: var(--font-mono) !important;
+    padding: 16px !important;
+}
+
+.mermaid-code-section .label-wrap {
+    color: var(--gold-dim) !important;
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+}
+
+/* === RIPPLE LOADING === */
+@keyframes ripple {
+    0%   { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+.loading-ripple {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gold-primary);
+    animation: ripple 1.5s ease-out infinite;
+}
 """
+
+def create_charts(flags: list, conflicts: list):
+    """Generate charts with Gold/Emerald/Silver palette."""
+    if not PLOTLY_AVAILABLE:
+        return None, None
+    
+    # 1. Radial Gauge for Flags Status
+    enabled_count = sum(1 for f in flags if f.enabled)
+    disabled_count = len(flags) - enabled_count
+    total = len(flags)
+    
+    # Create a donut gauge
+    fig1 = go.Figure(data=[go.Pie(
+        labels=['Active', 'Inactive'],
+        values=[enabled_count, disabled_count],
+        hole=.75,
+        marker_colors=['#d4af37', '#333333'],
+        textinfo='none',
+        hoverinfo='label+value',
+        showlegend=False
+    )])
+    
+    # Add center annotation
+    fig1.add_annotation(
+        text=f"<b>{total}</b>",
+        x=0.5, y=0.55,
+        font_size=48,
+        font_color="#d4af37",
+        showarrow=False
+    )
+    fig1.add_annotation(
+        text="TOTAL FLAGS",
+        x=0.5, y=0.4,
+        font_size=12,
+        font_color="#94a3b8",
+        showarrow=False
+    )
+    
+    fig1.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=20, b=20, l=20, r=20),
+        height=280,
+        font=dict(family="Outfit")
+    )
+
+    # 2. Bar Chart - Severity (Industrial Style)
+    severities = {}
+    for c in conflicts:
+        s = str(c.severity.value).upper() if hasattr(c, 'severity') else 'MEDIUM'
+        severities[s] = severities.get(s, 0) + 1
+    
+    if not severities:
+        severities = {'NONE': 0}
+    
+    order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+    counts = [severities.get(s, 0) for s in order]
+    colors = ['#dc2626', '#d4af37', '#f59e0b', '#30d158']
+    
+    filtered_data = [(l, c, col) for l, c, col in zip(order, counts, colors) if c > 0]
+    if not filtered_data:
+        filtered_data = [('OPERATIONAL', 0, '#30d158')]
+    
+    f_labels, f_counts, f_colors = zip(*filtered_data) if filtered_data else ([], [], [])
+    
+    fig2 = go.Figure(data=[go.Bar(
+        x=f_labels,
+        y=f_counts,
+        marker=dict(
+            color=f_colors,
+            line=dict(color='#1a1a1a', width=2)
+        ),
+        text=f_counts,
+        textposition='outside',
+        textfont=dict(color='#d4af37', size=14, family='JetBrains Mono')
+    )])
+    
+    fig2.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(26,26,26,0.3)',
+        font=dict(family="Outfit", color="#94a3b8"),
+        margin=dict(t=40, b=40, l=40, r=40),
+        height=280,
+        xaxis=dict(
+            showgrid=False,
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='rgba(212,175,55,0.1)',
+            zeroline=False
+        ),
+        title=dict(
+            text="Conflict Severity",
+            font=dict(size=14, color='#d4af37'),
+            x=0.5,
+            xanchor='center'
+        )
+    )
+    
+    return fig1, fig2
 
 
 def load_history() -> list[dict]:
-    """Load analysis history from disk."""
     try:
-        HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         if HISTORY_FILE.exists():
             with open(HISTORY_FILE, "r") as f:
                 return json.load(f)
-    except Exception:
+    except:
         pass
     return []
 
-
-def save_history(entry: dict) -> None:
-    """Save a new history entry."""
+def save_history_entry(entry: dict):
     try:
         history = load_history()
         history.insert(0, entry)
-        history = history[:20]  # Keep last 20 entries
         HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(HISTORY_FILE, "w") as f:
-            json.dump(history, f, indent=2)
-    except Exception:
+            json.dump(history[:50], f)
+    except:
         pass
 
 
-def format_history_display() -> str:
-    """Format history for display."""
-    history = load_history()
-    if not history:
-        return "*No analysis history yet*"
-    
-    lines = ["| Date | File | Flags | Conflicts | Status |",
-             "|------|------|-------|-----------|--------|"]
-    for entry in history[:10]:
-        date = entry.get("date", "N/A")[:16]
-        file = entry.get("config_file", "Unknown")[:20]
-        flags = entry.get("flags_count", 0)
-        conflicts = entry.get("conflicts_count", 0)
-        status = "✅" if conflicts == 0 else "⚠️"
-        lines.append(f"| {date} | {file} | {flags} | {conflicts} | {status} |")
-    
-    return "\n".join(lines)
+# --- ANALYSIS LOGIC ---
 
-
-def get_severity_badge(severity: str) -> str:
-    """Get HTML badge for severity."""
-    severity = severity.upper()
-    colors = {
-        "CRITICAL": ("🔴", "#dc2626"),
-        "HIGH": ("🟠", "#ea580c"),
-        "MEDIUM": ("🟡", "#d97706"),
-        "LOW": ("🟢", "#16a34a"),
-    }
-    emoji, color = colors.get(severity, ("⚪", "#6b7280"))
-    return f'<span style="background: {color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">{severity}</span>'
-
-
-def generate_mermaid_iframe(mermaid_code: str) -> str:
-    """Generate an iframe that renders Mermaid diagram."""
-    encoded = base64.urlsafe_b64encode(mermaid_code.encode()).decode()
-    img_url = f"https://mermaid.ink/img/{encoded}?theme=default"
-    
-    return f"""
-    <div style="text-align: center; padding: 20px; background: #f8fafc; border-radius: 8px; min-height: 400px;">
-        <img src="{img_url}" alt="Dependency Graph" style="max-width: 100%; height: auto; border-radius: 4px;" 
-             onerror="this.onerror=null; this.parentElement.innerHTML='<p style=\\'color:#666;\\'>⚠️ Could not load graph. Copy the Mermaid code tab.</p>'"/>
-        <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
-            🟢 Green = Enabled | 🔴 Red = Disabled | ⋯ Dotted = Conflict
-        </p>
-    </div>
-    """
-
-
-def generate_pdf_report(report_md: str, flags_count: int, conflicts_count: int) -> str | None:
-    """Generate PDF from markdown report."""
+def analyze_and_update_ui(
+    config_file, source_file, use_llm,
+    progress=gr.Progress()
+):
+    if not config_file:
+        return [0, 0, 0, 0, "0%", None, None, "", "", ""] 
+        
     try:
-        # Create HTML version of report
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>FlagGuard Analysis Report</title>
-    <style>
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }}
-        h1 {{ color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; }}
-        h2 {{ color: #6366f1; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 16px 0; }}
-        th, td {{ border: 1px solid #e5e7eb; padding: 12px; text-align: left; }}
-        th {{ background: #f3f4f6; }}
-        .critical {{ color: #dc2626; font-weight: bold; }}
-        .high {{ color: #ea580c; font-weight: bold; }}
-        .medium {{ color: #d97706; font-weight: bold; }}
-        .low {{ color: #16a34a; font-weight: bold; }}
-        code {{ background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: monospace; }}
-        pre {{ background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; }}
-        .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
-        .badge {{ background: #4f46e5; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9em; }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🚩 FlagGuard Analysis Report</h1>
-        <span class="badge">v{__version__}</span>
-    </div>
-    <p><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
-    <p><strong>Flags Analyzed:</strong> {flags_count} | <strong>Conflicts Found:</strong> {conflicts_count}</p>
-    <hr>
-    {report_md}
-    <hr>
-    <p style="color: #6b7280; font-size: 0.9em; text-align: center;">
-        Generated by FlagGuard - AI Feature Flag Conflict Analyzer
-    </p>
-</body>
-</html>
-"""
-        # Save HTML file for download (PDF requires browser/wkhtmltopdf)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-            f.write(html_content)
-            return f.name
-    except Exception:
-        return None
-
-
-def format_conflicts_with_colors(conflicts: list) -> str:
-    """Format conflicts with severity color coding."""
-    if not conflicts:
-        return "✅ **No conflicts detected!** Your flag configuration is clean."
-    
-    lines = ["## Conflicts\n"]
-    
-    for conflict in conflicts:
-        # Handle severity as enum or string
-        if hasattr(conflict, 'severity'):
-            sev = conflict.severity
-            if hasattr(sev, 'value'):
-                severity = str(sev.value).upper()
-            elif hasattr(sev, 'name'):
-                severity = sev.name.upper()
-            else:
-                severity = str(sev).upper()
-        else:
-            severity = "MEDIUM"
-        badge = get_severity_badge(severity)
-        
-        flags = ", ".join(f"`{f}`" for f in conflict.flags_involved)
-        
-        lines.append(f"""
-<div style="border-left: 4px solid {'#dc2626' if severity == 'CRITICAL' else '#ea580c' if severity == 'HIGH' else '#d97706' if severity == 'MEDIUM' else '#16a34a'}; padding: 12px 16px; margin: 12px 0; background: rgba(0,0,0,0.03); border-radius: 0 8px 8px 0;">
-
-**{conflict.conflict_id}** {badge}
-
-**Flags:** {flags}
-
-**Reason:** {conflict.reason}
-
-</div>
-""")
-    
-    return "\n".join(lines)
-
-
-def analyze_with_progress(
-    config_file: Any,
-    source_zip: Any | None,
-    use_llm: bool,
-    progress: gr.Progress = gr.Progress(),
-) -> Generator[tuple[str, str, str, str, str, Any, str], None, None]:
-    """Analyze with real-time progress and all outputs."""
-    default_outputs = ("", "", "", "", "", None, "")
-    
-    if config_file is None:
-        yield ("⚠️ Please upload a configuration file.", "", "", "", "", None, format_history_display())
-        return
-    
-    try:
-        # Step 1: Loading
-        progress(0.1, desc="📂 Loading configuration...")
-        yield ("📂 Loading configuration...", "", "", "", "", None, format_history_display())
-        time.sleep(0.2)
-        
+        progress(0.1, desc="INITIALIZING SYSTEM...")
         from flagguard.parsers import parse_config
-        config_path = Path(config_file.name)
-        config_name = config_path.name
-        flags = parse_config(config_path)
-        
-        progress(0.3, desc=f"✓ Loaded {len(flags)} flags")
-        time.sleep(0.1)
-        
-        # Step 2: Analysis
-        progress(0.5, desc="🔍 Detecting conflicts...")
-        yield (f"✓ Loaded {len(flags)} flags\n🔍 Detecting conflicts...", "", "", "", "", None, format_history_display())
-        
         from flagguard.analysis import FlagSATSolver, ConflictDetector
+        from flagguard.reporters import MarkdownReporter
+        
+        flags = parse_config(Path(config_file.name))
+        
+        progress(0.4, desc="SCANNING DEPENDENCIES...")
         solver = FlagSATSolver()
         detector = ConflictDetector(solver)
         detector.load_flags(flags)
         conflicts = detector.detect_all_conflicts()
         
-        progress(0.7, desc=f"✓ Found {len(conflicts)} conflicts")
-        time.sleep(0.1)
+        mutual_exclusions = [c for c in conflicts if c.conflict_type == ConflictType.MUTUAL_EXCLUSION]
+        dependency_violations = [c for c in conflicts if c.conflict_type == ConflictType.DEPENDENCY_VIOLATION]
         
-        # Step 3: LLM (optional)
-        executive_summary = ""
+        summary = ""
         if use_llm and conflicts:
-            progress(0.8, desc="🤖 Generating AI explanations...")
-            yield (f"✓ Loaded {len(flags)} flags\n"
-                   f"✓ Found {len(conflicts)} conflicts\n"
-                   f"🤖 Generating AI explanations...", "", "", "", "", None, format_history_display())
+            progress(0.6, desc="AI ANALYSIS IN PROGRESS...")
             try:
                 from flagguard.llm import OllamaClient, ExplanationEngine
                 client = OllamaClient()
@@ -326,252 +623,646 @@ def analyze_with_progress(
                     engine = ExplanationEngine(client)
                     for c in conflicts[:5]:
                         c.llm_explanation = engine.explain_conflict(c)
-                    executive_summary = engine.generate_executive_summary(
-                        len(flags), conflicts, []
-                    )
-            except Exception:
+                    summary = engine.generate_executive_summary(len(flags), conflicts, [])
+            except:
                 pass
+
+        progress(0.8, desc="GENERATING DIAGNOSTICS...")
         
-        # Step 4: Generate outputs
-        progress(0.9, desc="📝 Generating report...")
+        m_flags = len(flags)
+        m_conflicts = len(mutual_exclusions)
+        m_dependencies = len(dependency_violations)
+        m_enabled = sum(1 for f in flags if f.enabled)
         
-        # Colored conflicts section
-        colored_conflicts = format_conflicts_with_colors(conflicts)
+        total_issues = len(conflicts)
+        health_ratio = 1 - (total_issues / len(flags) if len(flags) > 0 else 0)
+        m_health = f"{int(max(0, health_ratio) * 100)}%"
         
-        # Full markdown report
-        from flagguard.reporters import MarkdownReporter
+        fig1, fig2 = create_charts(flags, conflicts)
+        
         reporter = MarkdownReporter()
-        report = reporter.generate_report(flags, conflicts, [], executive_summary)
+        report_md = reporter.generate_report(flags, conflicts, [], summary)
         
-        # Mermaid graph
-        graph_lines = ["flowchart TD"]
-        for flag in flags:
-            style = ":::enabled" if flag.enabled else ":::disabled"
-            safe_name = flag.name.replace("-", "_").replace(".", "_")
-            graph_lines.append(f'    {safe_name}["{flag.name}"]{style}')
-            for dep in flag.dependencies:
-                safe_dep = dep.replace("-", "_").replace(".", "_")
-                graph_lines.append(f"    {safe_name} --> {safe_dep}")
+        # Mermaid Graph
+        graph_def = ["flowchart TD"]
+        for f in flags:
+            style = ":::active" if f.enabled else ":::inactive"
+            name = f.name.replace("-", "_")
+            graph_def.append(f'    {name}["{f.name}"]{style}')
+            for dep in f.dependencies:
+                dep_name = dep.replace("-", "_")
+                graph_def.append(f"    {name} -->|REQUIRES| {dep_name}")
         
-        for conflict in conflicts:
-            if len(conflict.flags_involved) >= 2:
-                f1 = conflict.flags_involved[0].replace("-", "_").replace(".", "_")
-                f2 = conflict.flags_involved[1].replace("-", "_").replace(".", "_")
-                graph_lines.append(f"    {f1} -.->|⚠️| {f2}")
+        for c in conflicts:
+            if len(c.flags_involved) >= 2:
+                f1 = c.flags_involved[0].replace("-", "_")
+                f2 = c.flags_involved[1].replace("-", "_")
+                if c.conflict_type == ConflictType.MUTUAL_EXCLUSION:
+                    graph_def.append(f"    {f1} x--x {f2}")
+                    graph_def.append(f"    {f1}:::conflict")
+                    graph_def.append(f"    {f2}:::conflict")
+                elif c.conflict_type == ConflictType.DEPENDENCY_VIOLATION:
+                    graph_def.append(f"    {f1} ==>|MISSING| {f2}")
+                    graph_def.append(f"    {f1}:::violation")
         
-        graph_lines.extend([
-            "",
-            "    classDef enabled fill:#10b981,stroke:#059669,color:#fff",
-            "    classDef disabled fill:#ef4444,stroke:#dc2626,color:#fff",
-        ])
-        mermaid_code = "\n".join(graph_lines)
-        graph_html = generate_mermaid_iframe(mermaid_code)
+        # Industrial Mermaid Theme with Enhanced Styling
+        graph_def.append("    classDef active fill:#d4af37,stroke:#b8962f,stroke-width:3px,color:#000,font-weight:bold")
+        graph_def.append("    classDef inactive fill:#333333,stroke:#555555,stroke-width:2px,color:#94a3b8")
+        graph_def.append("    classDef conflict fill:#dc2626,stroke:#991b1b,stroke-width:3px,color:#fff,font-weight:bold")
+        graph_def.append("    classDef violation fill:#f59e0b,stroke:#d4af37,stroke-width:3px,color:#000,font-weight:bold")
         
-        # Generate code viewer content (sample config)
-        try:
-            with open(config_path, 'r') as f:
-                config_content = f.read()
-        except:
-            config_content = "# Could not read config file"
+        mermaid_code = "\n".join(graph_def)
         
-        # Generate PDF
-        pdf_file = generate_pdf_report(report, len(flags), len(conflicts))
+        # Enhanced Industrial Grid Background HTML
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=JetBrains+Mono:wght@400&display=swap');
+                
+                body {{ 
+                    margin: 0; 
+                    background: 
+                        linear-gradient(135deg, rgba(10,25,41,0.95) 0%, rgba(30,58,95,0.95) 100%),
+                        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(212,175,55,0.05) 2px, rgba(212,175,55,0.05) 4px),
+                        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(212,175,55,0.05) 2px, rgba(212,175,55,0.05) 4px);
+                    overflow: hidden;
+                    font-family: 'JetBrains Mono', monospace;
+                }}
+                
+                #container {{ 
+                    width: 100%; 
+                    height: 700px; 
+                    display: flex; 
+                    flex-direction: column;
+                    padding: 20px;
+                    box-sizing: border-box;
+                    position: relative;
+                }}
+                
+                /* Technical Header */
+                .graph-header {{
+                    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+                    border: 1px solid rgba(212,175,55,0.2);
+                    border-radius: 8px;
+                    padding: 12px 20px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    box-shadow: 
+                        0 0 20px rgba(212,175,55,0.3),
+                        inset 0 1px 0 rgba(255,255,255,0.1);
+                }}
+                
+                .graph-title {{
+                    font-family: 'Outfit', sans-serif;
+                    font-size: 1.2rem;
+                    font-weight: 700;
+                    color: #d4af37;
+                    text-shadow: 0 0 10px rgba(212,175,55,0.5);
+                    letter-spacing: 0.1em;
+                }}
+                
+                .graph-status {{
+                    display: flex;
+                    gap: 16px;
+                    font-size: 0.75rem;
+                    color: #94a3b8;
+                }}
+                
+                .status-item {{
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }}
+                
+                .status-led {{
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    box-shadow: 0 0 8px currentColor;
+                }}
+                
+                .led-active {{ background: #00d4ff; color: #d4af37; }}
+                .led-inactive {{ background: #2a4a6a; color: #2a4a6a; }}
+                .led-conflict {{ background: #ff3b30; color: #ff3b30; }}
+                .led-violation {{ background: #ff9500; color: #ff9500; }}
+                
+                /* Graph Container with 3D Panel Effect */
+                .graph-panel {{
+                    flex: 1;
+                    background: 
+                        linear-gradient(145deg, #1e3a5f 0%, #152940 100%);
+                    border: 3px solid #0d1f35;
+                    border-radius: 12px;
+                    padding: 20px;
+                    position: relative;
+                    box-shadow: 
+                        0 8px 24px rgba(0,0,0,0.5),
+                        inset 0 2px 0 rgba(255,255,255,0.05),
+                        inset 0 -2px 0 rgba(0,0,0,0.3);
+                    overflow: hidden;
+                }}
+                
+                /* Decorative Corner Elements */
+                .graph-panel::before,
+                .graph-panel::after {{
+                    content: '';
+                    position: absolute;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: radial-gradient(circle at 30% 30%, #a0a0a0, #505050);
+                    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5);
+                    z-index: 10;
+                }}
+                
+                .graph-panel::before {{
+                    top: 15px;
+                    left: 15px;
+                }}
+                
+                .graph-panel::after {{
+                    top: 15px;
+                    right: 15px;
+                }}
+                
+                /* Holographic Grid Overlay */
+                .holo-grid {{
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-image: 
+                        linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+                    background-size: 30px 30px;
+                    pointer-events: none;
+                    z-index: 1;
+                }}
+                
+                .mermaid {{ 
+                    width: 100%; 
+                    height: 100%; 
+                    position: relative;
+                    z-index: 2;
+                }}
+                
+                /* Mermaid SVG Enhancements */
+                .mermaid svg {{
+                    font-family: 'JetBrains Mono', monospace !important;
+                }}
+                
+                /* Control Panel */
+                .graph-controls {{
+                    position: absolute;
+                    bottom: 30px;
+                    right: 30px;
+                    background: rgba(15,15,15,0.9);
+                    border: 1px solid rgba(212,175,55,0.2);
+                    border-radius: 6px;
+                    padding: 8px;
+                    display: flex;
+                    gap: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    z-index: 100;
+                }}
+                
+                .control-btn {{
+                    background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.03));
+                    border: 1px solid #94a3b8;
+                    color: #d4af37;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.75rem;
+                    font-family: 'Outfit', sans-serif;
+                    transition: all 0.2s;
+                }}
+                
+                .control-btn:hover {{
+                    background: linear-gradient(to bottom, #3a5a7a, #2e4a6f);
+                    box-shadow: 0 0 8px rgba(212,175,55,0.5);
+                }}
+            </style>
+            <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+        </head>
+        <body>
+            <div id="container">
+                <div class="graph-header">
+                    <div class="graph-title">⚡ DEPENDENCY GRAPH - SYSTEM TOPOLOGY</div>
+                    <div class="graph-status">
+                        <div class="status-item">
+                            <span class="status-led led-active"></span>
+                            <span>ACTIVE</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-led led-inactive"></span>
+                            <span>INACTIVE</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-led led-conflict"></span>
+                            <span>CONFLICT</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-led led-violation"></span>
+                            <span>VIOLATION</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="graph-panel">
+                    <div class="holo-grid"></div>
+                    <div class="mermaid">{mermaid_code}</div>
+                    <div class="graph-controls" id="controls">
+                        <button class="control-btn" onclick="zoomIn()">🔍 +</button>
+                        <button class="control-btn" onclick="zoomOut()">🔍 -</button>
+                        <button class="control-btn" onclick="resetZoom()">⟲ RESET</button>
+                    </div>
+                </div>
+            </div>
+            
+            <script type="module">
+                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                
+                mermaid.initialize({{ 
+                    startOnLoad: false, 
+                    theme: 'dark',
+                    themeVariables: {{
+                        darkMode: true,
+                        background: '#0a1929',
+                        primaryColor: '#00d4ff',
+                        primaryTextColor: '#000',
+                        primaryBorderColor: '#94a3b8',
+                        lineColor: '#00d4ff',
+                        secondaryColor: '#2a4a6a',
+                        tertiaryColor: '#1e3a5f'
+                    }},
+                    flowchart: {{ 
+                        htmlLabels: true, 
+                        curve: 'basis',
+                        padding: 20,
+                        nodeSpacing: 80,
+                        rankSpacing: 100
+                    }} 
+                }});
+                
+                const element = document.querySelector('.mermaid');
+                await mermaid.run({{ nodes: [element] }});
+                
+                const svg = element.querySelector('svg');
+                let panZoom;
+                
+                if (svg) {{
+                    svg.style.height = '100%';
+                    svg.style.width = '100%';
+                    
+                    // Initialize pan-zoom
+                    panZoom = svgPanZoom(svg, {{ 
+                        zoomEnabled: true, 
+                        controlIconsEnabled: false,
+                        fit: true, 
+                        center: true,
+                        minZoom: 0.3,
+                        maxZoom: 5,
+                        zoomScaleSensitivity: 0.3
+                    }});
+                    
+                    // Make zoom functions global
+                    window.zoomIn = () => panZoom.zoomIn();
+                    window.zoomOut = () => panZoom.zoomOut();
+                    window.resetZoom = () => {{ panZoom.reset(); panZoom.center(); }};
+                }}
+            </script>
+        </body>
+        </html>
+        """
+        encoded_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+        iframe_html = f'<iframe src="data:text/html;base64,{encoded_html}" style="width:100%; height:600px; border:none;"></iframe>'
         
-        # Save to history
-        history_entry = {
+        save_history_entry({
             "date": datetime.now().isoformat(),
-            "config_file": config_name,
-            "flags_count": len(flags),
-            "conflicts_count": len(conflicts),
-        }
-        save_history(history_entry)
+            "config_file": Path(config_file.name).name,
+            "flags_count": m_flags,
+            "conflicts_count": len(conflicts)
+        })
         
-        # Final summary
-        progress(1.0, desc="✅ Analysis complete!")
-        status = "✅ No conflicts!" if not conflicts else f"⚠️ {len(conflicts)} conflicts"
-        
-        summary = f"""
-## 📊 Analysis Complete
+        return (
+            m_flags, m_conflicts, m_dependencies, m_enabled, m_health,
+            fig1, fig2, report_md, iframe_html, mermaid_code
+        )
 
-| Metric | Value |
-|--------|-------|
-| **Status** | {status} |
-| **Flags Analyzed** | {len(flags)} |
-| **Conflicts Found** | {len(conflicts)} |
-| **Enabled Flags** | {sum(1 for f in flags if f.enabled)} |
-| **Disabled Flags** | {sum(1 for f in flags if not f.enabled)} |
-
-{colored_conflicts}
-"""
-        
-        yield (summary, report, graph_html, mermaid_code, config_content, pdf_file, format_history_display())
-        
     except Exception as e:
-        yield (f"❌ Error: {str(e)}", "", "", "", "", None, format_history_display())
+        raise gr.Error(f"SYSTEM ERROR: {str(e)}")
+
+def format_conflicts_list(conflicts):
+    if not conflicts:
+        return "✅ ALL SYSTEMS OPERATIONAL"
+    text = ""
+    for c in conflicts:
+        icon = "🔴" if c.conflict_type == ConflictType.MUTUAL_EXCLUSION else "🟠"
+        text += f"{icon} {c.conflict_id}\n"
+    return text
 
 
-def clear_history() -> str:
-    """Clear all history."""
-    try:
-        if HISTORY_FILE.exists():
-            HISTORY_FILE.unlink()
-    except Exception:
-        pass
-    return "*History cleared*"
+# --- APP LAYOUT ---
 
-
-def create_app() -> gr.Blocks:
-    """Create the enhanced Gradio application."""
-    
-    with gr.Blocks(
-        title="FlagGuard - Feature Flag Analyzer",
-        theme=gr.themes.Soft(
-            primary_hue="indigo",
-            secondary_hue="purple",
+def create_app():
+    theme = gr.themes.Soft(
+        primary_hue=gr.themes.Color(
+            c50="#fefce8", c100="#fef9c3", c200="#fef08a",
+            c300="#fde047", c400="#f59e0b", c500="#d4af37",
+            c600="#b8962f", c700="#92702a", c800="#6b5220",
+            c900="#4a3a16", c950="#2a2008",
         ),
-        css=CUSTOM_CSS,
-    ) as app:
-        
-        # Header
-        gr.Markdown(f"""
-# 🚩 FlagGuard <small style="opacity:0.7">v{__version__}</small>
-### AI Feature Flag Conflict Analyzer
-
-Detect conflicts, impossible states, and dead code in your feature flags.
-
----
-        """)
-        
-        # Main content
-        with gr.Row():
-            # Left panel - Inputs
-            with gr.Column(scale=1):
-                gr.Markdown("### 📁 Upload Files")
-                gr.Markdown("*Drag and drop or click to upload*")
-                
-                config_input = gr.File(
-                    label="🗂️ Flag Configuration (JSON/YAML)",
-                    file_types=[".json", ".yaml", ".yml"],
-                    file_count="single",
-                    elem_classes=["upload-zone"],
-                )
-                source_input = gr.File(
-                    label="📦 Source Code (ZIP) - Optional",
-                    file_types=[".zip"],
-                    file_count="single",
-                    elem_classes=["upload-zone"],
-                )
-                use_llm_checkbox = gr.Checkbox(
-                    label="🤖 Use AI Explanations",
-                    value=True,
-                    info="Requires Ollama running locally"
-                )
-                
-                with gr.Row():
-                    analyze_btn = gr.Button(
-                        "🔍 Analyze Flags",
-                        variant="primary",
-                        size="lg",
-                        scale=2,
-                    )
-                    clear_btn = gr.Button(
-                        "🗑️",
-                        size="lg",
-                        scale=1,
-                    )
-            
-            # Right panel - Summary
-            with gr.Column(scale=2):
-                gr.Markdown("### 📊 Results")
-                summary_output = gr.Markdown(
-                    value="*Upload a configuration file and click Analyze to begin*"
-                )
-        
-        # Tabs for detailed output
-        with gr.Tabs():
-            with gr.TabItem("📋 Full Report"):
-                report_output = gr.Markdown(label="Analysis Report")
-                pdf_download = gr.File(
-                    label="📥 Download Report (HTML)",
-                    interactive=False,
-                )
-            
-            with gr.TabItem("🔗 Dependency Graph"):
-                graph_html = gr.HTML(label="Rendered Graph")
-            
-            with gr.TabItem("📝 Mermaid Code"):
-                gr.Markdown("Copy this code to [mermaid.live](https://mermaid.live):")
-                mermaid_code = gr.Code(
-                    label="Mermaid Diagram",
-                    language="markdown",
-                    lines=12,
-                )
-            
-            with gr.TabItem("💻 Config Viewer"):
-                gr.Markdown("**Syntax-Highlighted Configuration File**")
-                code_viewer = gr.Code(
-                    label="Configuration Content",
-                    language="json",
-                    lines=20,
-                    elem_classes=["code-viewer"],
-                )
-            
-            with gr.TabItem("📜 History"):
-                gr.Markdown("### Recent Analyses")
-                history_display = gr.Markdown(
-                    value=format_history_display(),
-                )
-                clear_history_btn = gr.Button("🗑️ Clear History", size="sm")
-        
-        # Connect handlers
-        analyze_btn.click(
-            fn=analyze_with_progress,
-            inputs=[config_input, source_input, use_llm_checkbox],
-            outputs=[summary_output, report_output, graph_html, mermaid_code, code_viewer, pdf_download, history_display],
-            show_progress="full",
-        )
-        
-        clear_btn.click(
-            fn=lambda: (None, None),
-            outputs=[config_input, source_input],
-        )
-        
-        clear_history_btn.click(
-            fn=clear_history,
-            outputs=[history_display],
-        )
-        
-        # Footer
-        gr.Markdown("""
----
-<center>
-
-**FlagGuard** - Open Source Feature Flag Analyzer
-
-[📚 Documentation](https://github.com/laxmi2577/flagguard) | 
-[🐛 Report Issue](https://github.com/laxmi2577/flagguard/issues) | 
-[⭐ Star on GitHub](https://github.com/laxmi2577/flagguard)
-
-Made with ❤️ by Laxmi Ranjan
-
-</center>
-        """)
+        neutral_hue="stone",
+    )
     
+    with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
+        
+        user_id = gr.State("")
+        
+        # --- LOGIN VIEW (SECURITY CONSOLE) ---
+        with gr.Group(visible=True, elem_classes=["login-bg"]) as login_view:
+            with gr.Row():
+                with gr.Column(scale=1):
+                    pass
+                with gr.Column(scale=1):
+                    gr.HTML("<div style='height: 10vh;'></div>")
+                    
+                    with gr.Group(elem_classes=["glass-card", "shimmer-border"]):
+                        # Elegant Gold Logo
+                        gr.HTML("""
+                        <div style='text-align: center; margin-bottom: 30px;'>
+                            <div class='login-logo'>🛡</div>
+                            <div class='login-title'>FlagGuard</div>
+                            <div class='login-subtitle'>Enterprise Feature Flag Intelligence</div>
+                        </div>
+                        """)
+                        
+                        gr.HTML("<div class='sidebar-title' style='text-align: center;'>Sign In</div>")
+                        
+                        email_input = gr.Textbox(
+                            placeholder="ENTER USER ID",
+                            show_label=False,
+                            container=False
+                        )
+                        password_input = gr.Textbox(
+                            type="password",
+                            placeholder="ENTER ACCESS CODE",
+                            show_label=False,
+                            container=False
+                        )
+                        login_btn = gr.Button("→ Sign In", elem_classes=["glass-btn"])
+                        login_msg = gr.Textbox(label="SYSTEM STATUS", interactive=False)
+                with gr.Column(scale=1):
+                    pass
+
+        # --- DASHBOARD VIEW (COMMAND CENTER) ---
+        with gr.Group(visible=False, elem_classes=["login-bg"]) as dashboard_view:
+            
+            # Header
+            with gr.Row(elem_classes=["app-header"]):
+                with gr.Column(scale=5):
+                    gr.HTML("""
+                    <div style='display: flex; align-items: center; gap: 16px;'>
+                        <div style='width:40px; height:40px; background: linear-gradient(135deg, #d4af37, #f59e0b);
+                                    border-radius:10px; display:flex; align-items:center; justify-content:center;
+                                    font-size:1.2rem; box-shadow: 0 2px 12px rgba(212,175,55,0.2);'>🛡</div>
+                        <div>
+                            <div class='brand-text'>FlagGuard</div>
+                            <div class='brand-subtitle'>
+                                <span class='status-dot'></span> Operational
+                            </div>
+                        </div>
+                    </div>
+                    """)
+                with gr.Column(scale=1, min_width=120):
+                    logout_btn = gr.Button(
+                        "Sign Out",
+                        elem_classes=["glass-btn"],
+                        size="sm"
+                    )
+
+            with gr.Row():
+                # CONTROL PANEL (Sidebar)
+                with gr.Column(scale=1, min_width=280, elem_classes=["frosted-sidebar"]):
+                    gr.HTML("<div class='sidebar-section'><div class='sidebar-title'>Project</div></div>")
+                    project_selector = gr.Dropdown(
+                        show_label=False,
+                        choices=[],
+                        interactive=True
+                    )
+                    new_project_btn = gr.Button("+ NEW PROJECT", size="sm")
+                    
+                    with gr.Group(visible=False) as new_project_group:
+                        new_proj_name = gr.Textbox(label="PROJECT NAME")
+                        create_proj_confirm = gr.Button("CREATE")
+                    
+                    gr.HTML("<div style='margin: 24px 0; border-top: 1px solid rgba(212,175,55,0.1);'></div>")
+                    
+                    gr.HTML("<div class='sidebar-section'><div class='sidebar-title'>Analysis</div></div>")
+                    
+                    file_input = gr.File(label="FLAG MANIFEST", file_types=[".json", ".yaml"])
+                    source_input = gr.File(label="SOURCE ARCHIVE", file_types=[".zip"])
+                    
+                    # AI Analysis Toggle with clear visual state
+                    ai_status_html = gr.HTML("""
+                    <div class='ai-toggle-container ai-toggle-on'>
+                        <span style='font-family: Inter; font-weight: 600;'>AI Analysis</span>
+                        <span style='font-family: Inter; font-size: 0.85rem; font-weight: 600;'>✅ Enabled</span>
+                    </div>
+                    """)
+                    use_llm = gr.Checkbox(label="Toggle AI Analysis ON/OFF", value=True)
+                    
+                    analyze_btn = gr.Button("⚡ Run Analysis", elem_classes=["glass-btn"])
+                    
+                    gr.HTML("<div style='margin: 24px 0; border-top: 1px solid rgba(212,175,55,0.1);'></div>")
+                    gr.HTML("<div class='sidebar-section'><div class='sidebar-title'>Issues</div></div>")
+                    conflicts_list = gr.Textbox(show_label=False, interactive=False, lines=10)
+
+                # MAIN DISPLAY
+                with gr.Column(scale=4):
+                    
+                    # Diagnostic Displays (LCD Style)
+                    gr.HTML("<h2 style='font-family: Outfit; color: #d4af37; text-align: center; margin-bottom: 20px; font-weight: 800;'>Overview</h2>")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            with gr.Group(elem_classes=["metric-card"]):
+                                val_flags = gr.HTML("<div class='metric-value'>0</div><div class='metric-label'>Total Flags</div>")
+                        with gr.Column(scale=1):
+                            with gr.Group(elem_classes=["metric-card"]):
+                                val_enabled = gr.HTML("<div class='metric-value'>0</div><div class='metric-label'>Active</div>")
+                        with gr.Column(scale=1):
+                            with gr.Group(elem_classes=["metric-card"]):
+                                val_conflicts = gr.HTML("<div class='metric-value'>0</div><div class='metric-label'>Conflicts</div>")
+                        with gr.Column(scale=1):
+                            with gr.Group(elem_classes=["metric-card"]):
+                                val_health = gr.HTML("<div class='metric-value'>--</div><div class='metric-label'>Health</div>")
+
+                    gr.HTML("<div style='margin: 30px 0;'></div>")
+                    
+                    # Data Visualization Tabs
+                    with gr.Tabs():
+                        with gr.TabItem("Analytics"):
+                            with gr.Row():
+                                with gr.Column(scale=1):
+                                    with gr.Group(elem_classes=["glass-card"]):
+                                        plot_status = gr.Plot(label="Flag Status")
+                                with gr.Column(scale=1):
+                                    with gr.Group(elem_classes=["glass-card"]):
+                                        plot_severity = gr.Plot(label="Severity")
+                        
+                        with gr.TabItem("Dependency Graph"):
+                            with gr.Group(elem_classes=["glass-card"]):
+                                graph_html = gr.HTML()
+                            
+                            # Full-width Mermaid Code section below graph
+                            with gr.Accordion("Show Mermaid Code", open=False, elem_classes=["mermaid-code-section"]):
+                                mermaid_code_display = gr.Code(
+                                    label="Mermaid Graph Definition",
+                                    language=None,
+                                    lines=20,
+                                    interactive=False,
+                                )
+                                with gr.Row():
+                                    copy_code_btn = gr.Button(
+                                        "📋 COPY CODE",
+                                        elem_classes=["glass-btn"],
+                                        size="sm"
+                                    )
+
+                        with gr.TabItem("Report"):
+                            with gr.Group(elem_classes=["glass-card"]):
+                                report_md = gr.Markdown("No scan data available.")
+
+                        with gr.TabItem("AI Chat"):
+                            create_chat_tab(app)
+
+        # --- EVENT HANDLERS ---
+        
+        def perform_login(email, password):
+            from flagguard.core.db import SessionLocal
+            from flagguard.core.models.tables import User
+            from flagguard.auth.utils import verify_password
+            try:
+                db = SessionLocal()
+                user = db.query(User).filter(User.email == email).first()
+                db.close()
+                if not user or not verify_password(password, user.hashed_password):
+                    return {login_msg: "❌ ACCESS DENIED"}
+                return {
+                    user_id: user.id,
+                    login_msg: "✅ AUTHENTICATION SUCCESSFUL",
+                    login_view: gr.update(visible=False),
+                    dashboard_view: gr.update(visible=True)
+                }
+            except Exception as e:
+                return {login_msg: f"⚠️ SYSTEM ERROR: {str(e)}"}
+
+        login_btn.click(
+            perform_login,
+            inputs=[email_input, password_input],
+            outputs=[user_id, login_msg, login_view, dashboard_view]
+        )
+
+        logout_btn.click(
+            lambda: (gr.update(visible=True), gr.update(visible=False)),
+            outputs=[login_view, dashboard_view]
+        )
+
+        # AI Analysis toggle visual feedback
+        def update_ai_toggle(is_enabled):
+            if is_enabled:
+                return """
+                <div class='ai-toggle-container ai-toggle-on'>
+                    <span style='font-family: Inter; font-weight: 600;'>AI Analysis</span>
+                    <span style='font-family: Inter; font-size: 0.85rem; font-weight: 600;'>✅ Enabled</span>
+                </div>
+                """
+            else:
+                return """
+                <div class='ai-toggle-container ai-toggle-off'>
+                    <span style='font-family: Inter; font-weight: 600;'>AI Analysis</span>
+                    <span style='font-family: Inter; font-size: 0.85rem; font-weight: 600;'>⬛ Disabled</span>
+                </div>
+                """
+        
+        use_llm.change(update_ai_toggle, inputs=[use_llm], outputs=[ai_status_html])
+
+        def refresh_projects(uid):
+            if not uid:
+                return gr.update(choices=[])
+            from flagguard.services.project import ProjectService
+            svc = ProjectService()
+            projs = svc.get_projects_for_user(uid)
+            return gr.update(choices=[(p.name, p.id) for p in projs], value=projs[0].id if projs else None)
+        
+        user_id.change(refresh_projects, inputs=[user_id], outputs=[project_selector])
+
+        new_project_btn.click(lambda: gr.update(visible=True), outputs=[new_project_group])
+        
+        def create_project_action(name, uid):
+            if not name:
+                return gr.update(), gr.update()
+            from flagguard.services.project import ProjectService
+            svc = ProjectService()
+            p = svc.create_project(name, uid)
+            projs = svc.get_projects_for_user(uid)
+            return gr.update(visible=False), gr.update(choices=[(p.name, p.id) for p in projs], value=p.id)
+            
+        create_proj_confirm.click(
+            create_project_action,
+            inputs=[new_proj_name, user_id],
+            outputs=[new_project_group, project_selector]
+        )
+
+        def ui_update_wrapper(pid, config, source, use_ai):
+            res = analyze_and_update_ui(config, source, use_ai)
+            m_flags, m_conflicts, m_dependencies, m_enabled, m_health = res[0], res[1], res[2], res[3], res[4]
+            
+            h_flags = f"<div class='metric-value'>{m_flags}</div><div class='metric-label'>Total Flags</div>"
+            h_en = f"<div class='metric-value'>{m_enabled}</div><div class='metric-label'>Active</div>"
+            h_conf = f"<div class='metric-value'>{m_conflicts + m_dependencies}</div><div class='metric-label'>Conflicts</div>"
+            h_hlt = f"<div class='metric-value'>{m_health}</div><div class='metric-label'>Health</div>"
+            
+            # Extract mermaid code (res[9] contains the raw mermaid code string from analyze_and_update_ui)
+            mermaid_raw_code = res[9] if len(res) > 9 else "No graph data available"
+            
+            return (
+                h_flags, h_en, h_conf, h_hlt,
+                res[5], res[6], res[7], res[8], mermaid_raw_code
+            )
+
+        analyze_btn.click(
+            ui_update_wrapper,
+            inputs=[project_selector, file_input, source_input, use_llm],
+            outputs=[
+                val_flags, val_enabled, val_conflicts, val_health,
+                plot_status, plot_severity,
+                report_md,
+                graph_html,
+                mermaid_code_display
+            ]
+        )
+        
+        # Copy code to clipboard functionality
+        copy_code_btn.click(
+            lambda code: gr.Info("Code copied to clipboard!") or code,
+            inputs=[mermaid_code_display],
+            outputs=[],
+            js="(code) => { navigator.clipboard.writeText(code); return code; }"
+        )
+
     return app
 
-
-def launch(
-    share: bool = False,
-    server_port: int = 7860,
-) -> None:
-    """Launch the Gradio app."""
+def launch():
     app = create_app()
-    app.launch(
-        share=share,
-        server_port=server_port,
-        show_error=True,
-    )
-
+    app.launch(show_error=True, allowed_paths=["."])
 
 if __name__ == "__main__":
     launch()

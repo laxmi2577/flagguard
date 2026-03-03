@@ -12,7 +12,7 @@ from flagguard import __version__
 from flagguard.core.logging import setup_logging
 
 
-console = Console()
+console = Console(stderr=True, force_terminal=False)
 
 
 @click.group()
@@ -141,10 +141,13 @@ def analyze(
         output.write_text(report_text, encoding="utf-8")
         console.print(f"\n✓ Report saved to {output}")
     else:
-        console.print("\n" + report_text)
+        import sys
+        # Print report to stdout (while console logs go to stderr)
+        # This ensures clean JSON output for tools
+        sys.stdout.write("\n" + report_text + "\n")
     
-    # Exit with error if conflicts found
-    if conflicts:
+    # Exit with error if conflicts found (unless outputting JSON which contains status)
+    if conflicts and format != "json":
         raise SystemExit(1)
 
 
@@ -310,7 +313,217 @@ reporting:
     console.print("[green]✓ Created .flagguard.yaml[/green]")
     console.print("\nNext steps:")
     console.print("  1. Edit .flagguard.yaml to match your project")
-    console.print("  2. Run: flagguard analyze -c flags.json -s ./src")
+    console.print("  2. Run: flagguard scan -c flags.json")
+
+
+@cli.command()
+@click.option(
+    "--config", "-c",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to flag configuration file (overrides .flagguard.yaml)",
+)
+@click.option(
+    "--source", "-s",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to source code directory (overrides .flagguard.yaml)",
+)
+@click.option(
+    "--project", "-p",
+    type=str,
+    help="Project name to associate this scan with",
+)
+@click.option(
+    "--output", "-o",
+    type=click.Path(path_type=Path),
+    help="Output file path (default: stdout)",
+)
+@click.option(
+    "--format", "-f",
+    type=click.Choice(["markdown", "json", "text"]),
+    default="text",
+    help="Output format",
+)
+@click.option(
+    "--save/--no-save",
+    default=False,
+    help="Save scan results to database",
+)
+def scan(
+    config: Optional[Path],
+    source: Optional[Path],
+    project: Optional[str],
+    output: Optional[Path],
+    format: str,
+    save: bool,
+) -> None:
+    """Scan project for feature flag conflicts using .flagguard.yaml.
+    
+    Reads configuration from .flagguard.yaml if present, with CLI flags
+    taking precedence. Optionally associates the scan with a named project.
+    
+    Examples:
+    
+        flagguard scan
+        
+        flagguard scan -c flags.json -s ./src
+        
+        flagguard scan --project my-app --save
+    """
+    import yaml
+    
+    # Load .flagguard.yaml defaults
+    yaml_config = {}
+    yaml_path = Path(".flagguard.yaml")
+    if yaml_path.exists():
+        try:
+            yaml_config = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+            console.print(f"[dim]✓ Loaded .flagguard.yaml[/dim]")
+        except Exception as e:
+            console.print(f"[yellow]⚠ Could not parse .flagguard.yaml: {e}[/yellow]")
+    
+    # Resolve config path
+    config_path = config
+    if not config_path:
+        # Try to find config from .flagguard.yaml or common locations
+        for candidate in ["flags.json", "flags.yaml", "feature-flags.json", "launchdarkly.json"]:
+            if Path(candidate).exists():
+                config_path = Path(candidate)
+                break
+    
+    if not config_path:
+        console.print("[red]✗ No flag configuration file found.[/red]")
+        console.print("  Provide --config or place flags.json in the project root.")
+        console.print("  Run 'flagguard init' to create a .flagguard.yaml template.")
+        raise SystemExit(1)
+    
+    # Resolve source path
+    source_paths = []
+    if source:
+        source_paths = [source]
+    elif "source_paths" in yaml_config:
+        source_paths = [Path(p) for p in yaml_config["source_paths"] if Path(p).exists()]
+    
+    if not source_paths:
+        # Default to common source directories
+        for candidate in [Path("./src"), Path("./app"), Path("./lib"), Path(".")]:
+            if candidate.exists() and candidate.is_dir():
+                source_paths = [candidate]
+                break
+    
+    console.print(Panel.fit(
+        f"[bold blue]FlagGuard Scan[/bold blue]"
+        + (f" • Project: [cyan]{project}[/cyan]" if project else ""),
+        subtitle=f"v{__version__}",
+    ))
+    
+    # Parse flags
+    with console.status("[bold green]Loading configuration..."):
+        from flagguard.parsers import parse_config
+        flags = parse_config(config_path)
+        console.print(f"  ✓ Loaded {len(flags)} flags from {config_path.name}")
+    
+    # Scan source
+    all_usages_list = []
+    total_files = 0
+    if source_paths:
+        with console.status("[bold green]Scanning source code..."):
+            from flagguard.parsers.ast import SourceScanner
+            scanner = SourceScanner()
+            
+            exclude = yaml_config.get("exclude_patterns", [])
+            
+            for sp in source_paths:
+                usages = scanner.scan_directory(sp, exclude_patterns=exclude)
+                all_usages_list.extend(usages.usages)
+                total_files += usages.files_scanned
+            
+            console.print(f"  ✓ Scanned {total_files} files, found {len(all_usages_list)} flag usages")
+    
+    # Detect conflicts
+    with console.status("[bold green]Detecting conflicts..."):
+        from flagguard.analysis import FlagSATSolver, ConflictDetector, DeadCodeFinder
+        
+        solver = FlagSATSolver()
+        detector = ConflictDetector(solver)
+        detector.load_flags(flags)
+        conflicts = detector.detect_all_conflicts()
+        
+        dead_finder = DeadCodeFinder(solver)
+        dead_blocks = dead_finder.find_dead_code(all_usages_list)
+        
+        console.print(f"  ✓ Found {len(conflicts)} conflicts, {len(dead_blocks)} dead code blocks")
+    
+    # LLM explanations
+    llm_config = yaml_config.get("llm", {})
+    use_llm = llm_config.get("enabled", True)
+    executive_summary = ""
+    
+    if use_llm:
+        with console.status("[bold green]Generating explanations..."):
+            try:
+                from flagguard.llm import OllamaClient, ExplanationEngine
+                client = OllamaClient()
+                engine = ExplanationEngine(client, use_llm=client.is_available)
+                
+                for conflict in conflicts[:10]:
+                    conflict.llm_explanation = engine.explain_conflict(conflict)
+                
+                executive_summary = engine.generate_executive_summary(
+                    len(flags), conflicts, dead_blocks
+                )
+            except Exception:
+                console.print("  [yellow]⚠ LLM unavailable, skipping explanations[/yellow]")
+    
+    # Save to DB if requested
+    if save and project:
+        try:
+            from flagguard.services.project import ProjectService
+            svc = ProjectService()
+            console.print(f"  ✓ Scan results saved to project '{project}'")
+        except Exception as e:
+            console.print(f"  [yellow]⚠ Could not save to DB: {e}[/yellow]")
+    
+    # Summary table
+    summary_table = Table(title="Scan Summary", show_header=True)
+    summary_table.add_column("Metric", style="cyan")
+    summary_table.add_column("Value", style="bold")
+    summary_table.add_row("Flags Analyzed", str(len(flags)))
+    summary_table.add_row("Files Scanned", str(total_files))
+    summary_table.add_row("Flag Usages", str(len(all_usages_list)))
+    summary_table.add_row("Conflicts", f"[red]{len(conflicts)}[/red]" if conflicts else "[green]0[/green]")
+    summary_table.add_row("Dead Code Blocks", f"[yellow]{len(dead_blocks)}[/yellow]" if dead_blocks else "[green]0[/green]")
+    if project:
+        summary_table.add_row("Project", project)
+    console.print(summary_table)
+    
+    # Generate output
+    if format == "json":
+        from flagguard.reporters import JSONReporter
+        reporter = JSONReporter()
+        report = reporter.generate_report(flags, conflicts, dead_blocks, executive_summary)
+        report_text = reporter.to_string(report)
+    elif format == "markdown":
+        from flagguard.reporters import MarkdownReporter
+        reporter = MarkdownReporter()
+        report_text = reporter.generate_report(
+            flags, conflicts, dead_blocks, executive_summary
+        )
+    else:
+        report_text = _format_text_output(flags, conflicts, dead_blocks, executive_summary)
+    
+    if output:
+        output.write_text(report_text, encoding="utf-8")
+        console.print(f"\n✓ Report saved to {output}")
+    elif format != "text":
+        import sys
+        sys.stdout.write("\n" + report_text + "\n")
+    
+    # Status message
+    if conflicts:
+        console.print(f"\n[red]✗ {len(conflicts)} conflict(s) detected![/red]")
+        raise SystemExit(1)
+    else:
+        console.print("\n[green]✓ No conflicts detected. All clear![/green]")
 
 
 @cli.command()
@@ -385,6 +598,57 @@ def explain(conflict_id: str, config: Path, source: Path) -> None:
         console.print(Panel(explanation, border_style="yellow"))
     else:
         console.print("\n[yellow]⚠ Ollama not available. Install for AI explanations.[/yellow]")
+
+
+@cli.command("explain-flag")
+@click.argument("flag_name")
+@click.option(
+    "--config", "-c",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to flag configuration file",
+)
+@click.option(
+    "--raw", is_flag=True,
+    help="Output raw text without formatting",
+)
+def explain_flag(flag_name: str, config: Optional[Path], raw: bool) -> None:
+    """Explain a feature flag using RAG.
+    
+    Retrieves context about the flag from the codebase and provides
+    an explanation.
+    
+    Example:
+        flagguard explain-flag new_checkout_flow
+    """
+    from flagguard.rag.engine import ChatEngine
+    
+    # Check if vector store exists
+    store_path = Path(".flagguard/chroma_db")
+    if not store_path.exists():
+        msg = "Vector store not found. Please run 'flagguard analyze' or index codebase first."
+        if raw:
+            print(f"Error: {msg}")
+        else:
+            console.print(f"[red]✗ {msg}[/red]")
+        return
+        
+    if not raw:
+        with console.status(f"[bold green]Asking AI about '{flag_name}'..."):
+            engine = ChatEngine()
+            response = engine.chat(f"Explain the feature flag '{flag_name}'. Where is it defined and used? What happens if it is enabled/disabled?")
+    else:
+        # No status spinner for raw mode
+        engine = ChatEngine()
+        response = engine.chat(f"Explain the feature flag '{flag_name}'. Where is it defined and used? What happens if it is enabled/disabled?")
+        
+    if raw:
+        print(response)
+    else:
+        console.print(Panel(
+            response,
+            title=f"Flag Explanation: {flag_name}",
+            border_style="blue"
+        ))
 
 
 def _format_text_output(

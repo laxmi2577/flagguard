@@ -3,7 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from flagguard.core.models import Conflict, DeadCodeBlock, FlagDefinition
+from flagguard.core.models import Conflict, ConflictType, DeadCodeBlock, FlagDefinition
 
 
 class MarkdownReporter:
@@ -42,15 +42,22 @@ class MarkdownReporter:
         """
         self._sections.clear()
         
+        # Split conflicts by type
+        mutual_exclusions = [c for c in conflicts if c.conflict_type == ConflictType.MUTUAL_EXCLUSION]
+        dependency_violations = [c for c in conflicts if c.conflict_type == ConflictType.DEPENDENCY_VIOLATION]
+        
         # Header
-        self._add_header(len(flags), len(conflicts), len(dead_blocks))
+        self._add_header(len(flags), len(mutual_exclusions), len(dependency_violations), len(dead_blocks))
         
         # Executive summary
         if executive_summary:
             self._add_section("Executive Summary", executive_summary)
         
-        # Conflicts
-        self._add_conflicts_section(conflicts)
+        # Conflicts (Mutual Exclusions)
+        self._add_conflicts_section(mutual_exclusions)
+        
+        # Dependency Violations
+        self._add_dependency_violations_section(dependency_violations)
         
         # Dead code
         self._add_dead_code_section(dead_blocks)
@@ -71,10 +78,12 @@ class MarkdownReporter:
         self,
         flag_count: int,
         conflict_count: int,
+        dependency_count: int,
         dead_count: int,
     ) -> None:
         """Add report header."""
-        status = "✅ Healthy" if conflict_count == 0 else "⚠️ Issues Found"
+        total_issues = conflict_count + dependency_count + dead_count
+        status = "✅ Healthy" if total_issues == 0 else "⚠️ Issues Found"
         
         header = f"""# FlagGuard Analysis Report
 
@@ -84,7 +93,8 @@ class MarkdownReporter:
 | Metric | Count |
 |--------|-------|
 | Flags Analyzed | {flag_count} |
-| Conflicts | {conflict_count} |
+| Mutual Conflicts | {conflict_count} |
+| Dependency Errors | {dependency_count} |
 | Dead Code Blocks | {dead_count} |"""
         
         self._sections.append(header)
@@ -94,9 +104,9 @@ class MarkdownReporter:
         self._sections.append(f"## {title}\n\n{content}")
     
     def _add_conflicts_section(self, conflicts: list[Conflict]) -> None:
-        """Add conflicts section."""
+        """Add mutual exclusion conflicts section."""
         if not conflicts:
-            self._add_section("Conflicts", "No conflicts detected.")
+            self._add_section("Mutual Exclusions", "✅ No mutual exclusion conflicts detected.")
             return
         
         content_parts = []
@@ -130,7 +140,30 @@ class MarkdownReporter:
             
             content_parts.append(part)
         
-        self._add_section("Conflicts", "\n---\n".join(content_parts))
+        self._add_section("Mutual Exclusions", "\n---\n".join(content_parts))
+
+    def _add_dependency_violations_section(self, violations: list[Conflict]) -> None:
+        """Add dependency violations section."""
+        if not violations:
+            self._add_section("Dependency Violations", "✅ No dependency violations detected.")
+            return
+
+        content_parts = []
+
+        for violation in violations:
+            flags_str = " → ".join(f"`{f}`" for f in violation.flags_involved)
+            
+            part = f"""### ⚠️ {violation.conflict_id}: {flags_str}
+
+**Type:** Dependency Violation  
+**Reason:** {violation.reason}
+"""
+            if violation.llm_explanation:
+                part += f"\n**Explanation:** {violation.llm_explanation}\n"
+            
+            content_parts.append(part)
+        
+        self._add_section("Dependency Violations", "\n---\n".join(content_parts))
     
     def _add_dead_code_section(self, dead_blocks: list[DeadCodeBlock]) -> None:
         """Add dead code section."""

@@ -1,5 +1,0 @@
-.vsix
-node_modules/
-out/
-*.log
-.vscode-test/

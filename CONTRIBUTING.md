@@ -1,6 +1,6 @@
 ﻿# Contributing to FlagGuard
 
-Thank you for your interest in contributing to FlagGuard! ðŸŽ‰
+Thank you for your interest in contributing to FlagGuard!
 
 ## Development Setup
 
@@ -91,4 +91,4 @@ Please read [SECURITY.md](SECURITY.md) before contributing security-related chan
 - Open a [Discussion](https://github.com/laxmi2577/flagguard/discussions)
 - Check existing [Issues](https://github.com/laxmi2577/flagguard/issues)
 
-Thank you for contributing! ðŸš©
+Thank you for contributing!

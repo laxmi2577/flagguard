@@ -48,8 +48,14 @@ class GenericParser(BaseParser):
         if isinstance(data, list):
             flags_data = data
         elif isinstance(data, dict):
-            flags_data = data.get("flags", [])
-            # Also support object-style flags (like LaunchDarkly)
+            # Check if "flags" key exists
+            if "flags" in data:
+                flags_data = data["flags"]
+            else:
+                # Assume the entire dict is a mapping of flag_name -> flag_data
+                flags_data = data
+                
+            # If we have a dictionary (either from "flags" key or root), convert to list
             if isinstance(flags_data, dict):
                 flags_data = [
                     {**v, "name": k} for k, v in flags_data.items()
@@ -111,6 +117,18 @@ class GenericParser(BaseParser):
         if isinstance(dependencies, str):
             dependencies = [dependencies]
         
+        # Support LaunchDarkly-style "prerequisites"
+        # Format: "prerequisites": [{ "key": "flag_key", ... }]
+        prerequisites = data.get("prerequisites", [])
+        for prereq in prerequisites:
+            if isinstance(prereq, dict) and "key" in prereq:
+                dependencies.append(prereq["key"])
+            
+        # Get conflicts (mutual exclusion)
+        conflicts = data.get("conflicts", [])
+        if isinstance(conflicts, str):
+            conflicts = [conflicts]
+        
         return FlagDefinition(
             name=name,
             flag_type=flag_type,
@@ -119,6 +137,7 @@ class GenericParser(BaseParser):
             variations=variations,
             targeting_rules=[],
             dependencies=dependencies,
+            conflicts=conflicts,
             description=data.get("description", ""),
             tags=data.get("tags", []),
         )
