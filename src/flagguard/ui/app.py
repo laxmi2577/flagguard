@@ -984,6 +984,7 @@ def create_app():
     with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
         
         user_id = gr.State("")
+        user_role = gr.State("viewer")
         
         # --- LOGIN VIEW (SECURITY CONSOLE) ---
         with gr.Group(visible=True, elem_classes=["login-bg"]) as login_view:
@@ -1040,6 +1041,8 @@ def create_app():
                         </div>
                     </div>
                     """)
+                with gr.Column(scale=1, min_width=200):
+                    role_badge = gr.HTML("<div style='text-align:right; font-family:Inter; font-size:0.75rem; color:#94a3b8;'>Role: viewer</div>")
                 with gr.Column(scale=1, min_width=120):
                     logout_btn = gr.Button(
                         "Sign Out",
@@ -1143,6 +1146,195 @@ def create_app():
                         with gr.TabItem("AI Chat"):
                             create_chat_tab(app)
 
+                        # --- ENVIRONMENTS TAB (analyst+) ---
+                        with gr.TabItem("Environments") as env_tab:
+                            with gr.Group(elem_classes=["glass-card"]):
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Multi-Environment Manager</div>")
+                                with gr.Row():
+                                    env_project_id = gr.Textbox(label="Project ID", scale=2)
+                                    env_name = gr.Textbox(label="Environment Name", placeholder="e.g. dev, staging, prod", scale=2)
+                                    env_create_btn = gr.Button("Create Environment", elem_classes=["glass-btn"], scale=1)
+                                env_flags_json = gr.Textbox(label="Flag Overrides (JSON)", placeholder='{"dark_mode": {"enabled": true}, "new_checkout": {"enabled": false}}', lines=3)
+                                env_result = gr.JSON(label="Result")
+
+                                def create_env_action(proj_id, name, overrides_json):
+                                    import json, requests
+                                    try:
+                                        overrides = json.loads(overrides_json) if overrides_json.strip() else {}
+                                        resp = requests.post(f"http://localhost:8000/api/v1/environments/project/{proj_id}",
+                                                             json={"name": name, "flag_overrides": overrides},
+                                                             headers={"Authorization": "Bearer demo"})
+                                        return resp.json() if resp.status_code < 400 else {"error": resp.text}
+                                    except Exception as e:
+                                        return {"error": str(e)}
+
+                                env_create_btn.click(create_env_action, inputs=[env_project_id, env_name, env_flags_json], outputs=[env_result])
+
+                                gr.HTML("<div style='margin:20px 0; border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Drift Detection</div>")
+                                with gr.Row():
+                                    drift_env_a = gr.Textbox(label="Environment A ID", scale=1)
+                                    drift_env_b = gr.Textbox(label="Environment B ID", scale=1)
+                                    drift_compare_btn = gr.Button("Compare", elem_classes=["glass-btn"], scale=1)
+                                drift_result = gr.JSON(label="Drift Report")
+
+                                def compare_envs(env_a, env_b):
+                                    import requests
+                                    try:
+                                        resp = requests.get(f"http://localhost:8000/api/v1/environments/compare",
+                                                            params={"env_a_id": env_a, "env_b_id": env_b})
+                                        return resp.json() if resp.status_code < 400 else {"error": resp.text}
+                                    except Exception as e:
+                                        return {"error": str(e)}
+
+                                drift_compare_btn.click(compare_envs, inputs=[drift_env_a, drift_env_b], outputs=[drift_result])
+
+                        # --- FLAG LIFECYCLE TAB (all roles can view) ---
+                        with gr.TabItem("Flag Lifecycle") as lifecycle_tab:
+                            with gr.Group(elem_classes=["glass-card"]):
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Flag Staleness & Zombie Detection</div>")
+                                with gr.Row():
+                                    lc_project_id = gr.Textbox(label="Project ID", scale=2)
+                                    lc_threshold = gr.Slider(label="Stale Threshold (days)", minimum=7, maximum=180, value=30, step=1, scale=2)
+                                    lc_check_btn = gr.Button("Check Lifecycle", elem_classes=["glass-btn"], scale=1)
+
+                                with gr.Row():
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            lc_total = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Total Flags</div>")
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            lc_active = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Active</div>")
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            lc_stale = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Stale</div>")
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            lc_zombie = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Zombie</div>")
+
+                                lc_suggestions = gr.Markdown("Run a lifecycle check to see cleanup suggestions.")
+                                lc_flags_table = gr.JSON(label="Flag Details")
+
+                                def check_lifecycle(proj_id, threshold):
+                                    import requests
+                                    try:
+                                        resp = requests.get(f"http://localhost:8000/api/v1/lifecycle/report/{proj_id}",
+                                                            params={"stale_threshold_days": int(threshold)})
+                                        if resp.status_code >= 400:
+                                            return ("-", "-", "-", "-", "Error fetching lifecycle data.", {})
+                                        data = resp.json()
+                                        h_total = f"<div class='metric-value'>{data.get('total_flags', 0)}</div><div class='metric-label'>Total Flags</div>"
+                                        h_active = f"<div class='metric-value'>{data.get('active_flags', 0)}</div><div class='metric-label'>Active</div>"
+                                        h_stale = f"<div class='metric-value' style='color:#f59e0b;'>{data.get('stale_flags', 0)}</div><div class='metric-label'>Stale</div>"
+                                        h_zombie = f"<div class='metric-value' style='color:#ef4444;'>{data.get('zombie_flags', 0)}</div><div class='metric-label'>Zombie</div>"
+                                        suggestions = "### Cleanup Suggestions\n"
+                                        for s in data.get('cleanup_suggestions', []):
+                                            suggestions += f"- {s}\n"
+                                        return (h_total, h_active, h_stale, h_zombie, suggestions, data.get('flags', []))
+                                    except Exception as e:
+                                        return ("-", "-", "-", "-", f"Error: {e}", {})
+
+                                lc_check_btn.click(check_lifecycle, inputs=[lc_project_id, lc_threshold],
+                                                   outputs=[lc_total, lc_active, lc_stale, lc_zombie, lc_suggestions, lc_flags_table])
+
+                        # --- AUDIT LOG TAB (admin only) ---
+                        with gr.TabItem("Audit Log") as audit_tab:
+                            with gr.Group(elem_classes=["glass-card"]):
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Audit Trail & Compliance</div>")
+                                with gr.Row():
+                                    audit_action_filter = gr.Dropdown(
+                                        label="Filter by Action",
+                                        choices=[("", ""), ("create", "create"), ("update", "update"), ("delete", "delete"), ("scan", "scan"), ("login", "login"), ("export", "export")],
+                                        value="", scale=1)
+                                    audit_resource_filter = gr.Dropdown(
+                                        label="Filter by Resource",
+                                        choices=[("", ""), ("project", "project"), ("scan", "scan"), ("webhook", "webhook"), ("environment", "environment"), ("plugin", "plugin")],
+                                        value="", scale=1)
+                                    audit_refresh_btn = gr.Button("Refresh", elem_classes=["glass-btn"], scale=1)
+                                    audit_export_btn = gr.Button("Export CSV", elem_classes=["glass-btn"], scale=1)
+
+                                with gr.Row():
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            audit_total = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Total Events</div>")
+                                    with gr.Column(scale=1):
+                                        with gr.Group(elem_classes=["metric-card"]):
+                                            audit_today = gr.HTML("<div class='metric-value'>-</div><div class='metric-label'>Today</div>")
+
+                                audit_table = gr.JSON(label="Audit Events")
+
+                                def load_audit(action_filter, resource_filter):
+                                    import requests
+                                    try:
+                                        params = {"limit": 50}
+                                        if action_filter:
+                                            params["action"] = action_filter
+                                        if resource_filter:
+                                            params["resource_type"] = resource_filter
+                                        # Get stats
+                                        stats_resp = requests.get("http://localhost:8000/api/v1/audit/stats")
+                                        stats = stats_resp.json() if stats_resp.status_code < 400 else {}
+                                        # Get logs
+                                        logs_resp = requests.get("http://localhost:8000/api/v1/audit", params=params)
+                                        logs = logs_resp.json() if logs_resp.status_code < 400 else []
+                                        h_total = f"<div class='metric-value'>{stats.get('total_events', 0)}</div><div class='metric-label'>Total Events</div>"
+                                        h_today = f"<div class='metric-value'>{stats.get('events_today', 0)}</div><div class='metric-label'>Today</div>"
+                                        return (h_total, h_today, logs)
+                                    except Exception as e:
+                                        return ("-", "-", {"error": str(e)})
+
+                                audit_refresh_btn.click(load_audit, inputs=[audit_action_filter, audit_resource_filter],
+                                                       outputs=[audit_total, audit_today, audit_table])
+
+                        # --- ADMIN PANEL (admin only) ---
+                        with gr.TabItem("Admin") as admin_tab:
+                            with gr.Group(elem_classes=["glass-card"]):
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>User Management</div>")
+                                admin_users_btn = gr.Button("Load Users", elem_classes=["glass-btn"])
+                                admin_users_table = gr.JSON(label="All Users")
+
+                                def load_users():
+                                    import requests
+                                    try:
+                                        resp = requests.get("http://localhost:8000/api/v1/auth/users")
+                                        return resp.json() if resp.status_code < 400 else {"error": "Access denied or API not available"}
+                                    except Exception as e:
+                                        return {"error": str(e)}
+
+                                admin_users_btn.click(load_users, outputs=[admin_users_table])
+
+                                gr.HTML("<div style='margin:20px 0; border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Platform Analytics</div>")
+                                admin_analytics_btn = gr.Button("Load Analytics", elem_classes=["glass-btn"])
+                                admin_analytics_data = gr.JSON(label="Platform Stats")
+                                admin_leaderboard = gr.JSON(label="Leaderboard")
+
+                                def load_analytics():
+                                    import requests
+                                    try:
+                                        overview = requests.get("http://localhost:8000/api/v1/analytics/overview").json()
+                                        leaderboard = requests.get("http://localhost:8000/api/v1/analytics/leaderboard").json()
+                                        return (overview, leaderboard)
+                                    except Exception as e:
+                                        return ({"error": str(e)}, {})
+
+                                admin_analytics_btn.click(load_analytics, outputs=[admin_analytics_data, admin_leaderboard])
+
+                                gr.HTML("<div style='margin:20px 0; border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                                gr.HTML("<div class='sidebar-title' style='margin-bottom:12px;'>Plugin Management</div>")
+                                admin_plugins_btn = gr.Button("Load Plugins", elem_classes=["glass-btn"])
+                                admin_plugins_table = gr.JSON(label="Registered Plugins")
+
+                                def load_plugins():
+                                    import requests
+                                    try:
+                                        resp = requests.get("http://localhost:8000/api/v1/plugins")
+                                        return resp.json() if resp.status_code < 400 else {"error": resp.text}
+                                    except Exception as e:
+                                        return {"error": str(e)}
+
+                                admin_plugins_btn.click(load_plugins, outputs=[admin_plugins_table])
+
         # --- EVENT HANDLERS ---
         
         def perform_login(email, password):
@@ -1154,20 +1346,46 @@ def create_app():
                 user = db.query(User).filter(User.email == email).first()
                 db.close()
                 if not user or not verify_password(password, user.hashed_password):
-                    return {login_msg: "❌ ACCESS DENIED"}
-                return {
-                    user_id: user.id,
-                    login_msg: "✅ AUTHENTICATION SUCCESSFUL",
-                    login_view: gr.update(visible=False),
-                    dashboard_view: gr.update(visible=True)
-                }
+                    return (
+                        gr.update(),  # user_id
+                        "viewer",     # user_role
+                        "ACCESS DENIED",  # login_msg
+                        gr.update(), gr.update(),  # login/dashboard views
+                        gr.update(),  # role_badge
+                        gr.update(), gr.update(), gr.update(),  # env, audit, admin tabs
+                    )
+                role = getattr(user, 'role', 'viewer') or 'viewer'
+                role_colors = {'admin': '#ef4444', 'analyst': '#f59e0b', 'viewer': '#94a3b8'}
+                role_color = role_colors.get(role, '#94a3b8')
+                badge_html = f"<div style='text-align:right;font-family:Inter;font-size:0.8rem;'><span style='background:rgba({','.join(str(int(role_color.lstrip('#')[i:i+2], 16)) for i in (0,2,4))},0.15);color:{role_color};padding:4px 12px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;'>{role}</span></div>"
+
+                # Role-based visibility
+                is_analyst_plus = role in ('admin', 'analyst')
+                is_admin = role == 'admin'
+
+                return (
+                    user.id,  # user_id
+                    role,     # user_role
+                    "AUTHENTICATION SUCCESSFUL",  # login_msg
+                    gr.update(visible=False),  # login_view
+                    gr.update(visible=True),   # dashboard_view
+                    badge_html,                # role_badge
+                    gr.update(visible=is_analyst_plus),  # env_tab
+                    gr.update(visible=is_admin),         # audit_tab
+                    gr.update(visible=is_admin),         # admin_tab
+                )
             except Exception as e:
-                return {login_msg: f"⚠️ SYSTEM ERROR: {str(e)}"}
+                return (
+                    gr.update(), "viewer", f"SYSTEM ERROR: {str(e)}",
+                    gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(),
+                )
 
         login_btn.click(
             perform_login,
             inputs=[email_input, password_input],
-            outputs=[user_id, login_msg, login_view, dashboard_view]
+            outputs=[user_id, user_role, login_msg, login_view, dashboard_view,
+                     role_badge, env_tab, audit_tab, admin_tab]
         )
 
         logout_btn.click(
