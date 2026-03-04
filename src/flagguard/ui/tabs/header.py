@@ -18,6 +18,14 @@ DARK_LIGHT_JS = """
     var pref = localStorage.getItem('fg_theme') || 'dark';
     if (pref === 'light') document.body.classList.add('light-mode');
 
+    // Set initial button text based on saved preference
+    setTimeout(function() {
+        var btns = document.querySelectorAll('.theme-toggle-btn');
+        btns.forEach(function(btn) {
+            btn.innerHTML = pref === 'light' ? '☀️ Light' : '🌙 Dark';
+        });
+    }, 100);
+
     // Global toggle function called by Gradio button
     window.fgToggleTheme = function() {
         var isLight = document.body.classList.toggle('light-mode');

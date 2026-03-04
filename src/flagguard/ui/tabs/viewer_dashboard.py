@@ -289,7 +289,77 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
             except Exception:
                 return gr.update(choices=[])
 
+        def load_analytics(proj_id):
+            """Populate analytics charts when a project is selected."""
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+
+            fig_status, ax1 = plt.subplots(figsize=(4, 3))
+            fig_severity, ax2 = plt.subplots(figsize=(4, 3))
+
+            if not proj_id:
+                ax1.text(0.5, 0.5, "Select a project", ha="center", va="center", color="#94a3b8")
+                ax2.text(0.5, 0.5, "Select a project", ha="center", va="center", color="#94a3b8")
+                ax1.set_facecolor("#0d0d0d"); fig_status.patch.set_facecolor("#0d0d0d")
+                ax2.set_facecolor("#0d0d0d"); fig_severity.patch.set_facecolor("#0d0d0d")
+                return fig_status, fig_severity
+
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import Scan
+                db = SessionLocal()
+                scans = db.query(Scan).filter(
+                    Scan.project_id == proj_id, Scan.status == "completed"
+                ).order_by(Scan.created_at.desc()).limit(10).all()
+
+                if not scans:
+                    ax1.text(0.5, 0.5, "No scans yet", ha="center", va="center", color="#94a3b8")
+                    ax2.text(0.5, 0.5, "No scans yet", ha="center", va="center", color="#94a3b8")
+                else:
+                    latest = scans[0].result_summary or {}
+                    flags = latest.get("flag_count", 0)
+                    conflicts = latest.get("conflict_count", 0)
+                    deps = latest.get("dependency_count", 0)
+                    healthy = max(0, flags - conflicts - deps)
+
+                    # Pie chart — flag status
+                    labels = ["Healthy", "Conflicts", "Dependencies"]
+                    sizes = [healthy, conflicts, deps]
+                    colors = ["#30d158", "#ef4444", "#f59e0b"]
+                    non_zero = [(l, s, c) for l, s, c in zip(labels, sizes, colors) if s > 0]
+                    if non_zero:
+                        ax1.pie([x[1] for x in non_zero], labels=[x[0] for x in non_zero],
+                                colors=[x[2] for x in non_zero], autopct="%1.0f%%",
+                                textprops={"color": "white", "fontsize": 9})
+                    else:
+                        ax1.text(0.5, 0.5, "No flag data", ha="center", va="center", color="#94a3b8")
+                    ax1.set_title("Flag Status", color="#d4af37", fontsize=11)
+
+                    # Line chart — health score trend
+                    scan_dates = [str(s.created_at)[:10] for s in reversed(scans)]
+                    health_vals = [(s.result_summary or {}).get("health_score", 0) for s in reversed(scans)]
+                    ax2.plot(scan_dates, health_vals, marker="o", color="#d4af37", linewidth=2)
+                    ax2.fill_between(range(len(health_vals)), health_vals, alpha=0.15, color="#d4af37")
+                    ax2.set_ylim(0, 105)
+                    ax2.set_title("Health Score Trend", color="#d4af37", fontsize=11)
+                    ax2.tick_params(colors="#94a3b8", labelsize=7)
+                    ax2.set_ylabel("Health %", color="#94a3b8", fontsize=8)
+                    plt.setp(ax2.get_xticklabels(), rotation=45, ha="right")
+
+                ax1.set_facecolor("#0d0d0d"); fig_status.patch.set_facecolor("#0d0d0d")
+                ax2.set_facecolor("#0d0d0d"); fig_severity.patch.set_facecolor("#0d0d0d")
+                fig_status.tight_layout()
+                fig_severity.tight_layout()
+            except Exception:
+                ax1.text(0.5, 0.5, "Error loading data", ha="center", va="center", color="#ef4444")
+                ax2.text(0.5, 0.5, "Error loading data", ha="center", va="center", color="#ef4444")
+
+            return fig_status, fig_severity
+
         user_state.change(refresh_projects, inputs=[user_state], outputs=[project_selector])
         refresh_proj_btn.click(refresh_projects, inputs=[user_state], outputs=[project_selector])
+        project_selector.change(load_analytics, inputs=[project_selector], outputs=[plot_status, plot_severity])
 
     return dashboard, logout_btn, plot_status, plot_severity, graph_html, mermaid_code_display, report_md, val_flags, val_active, val_conflicts, val_health
+
