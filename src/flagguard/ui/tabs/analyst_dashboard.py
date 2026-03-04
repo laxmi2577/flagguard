@@ -119,17 +119,22 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                     try:
                         from flagguard.core.db import SessionLocal
                         from flagguard.core.models.tables import Environment, Project
-                        ovr = _json.loads(overrides) if overrides and overrides.strip() else {}
+                        try:
+                            ovr = _json.loads(overrides) if overrides and overrides.strip() else {}
+                            if not isinstance(ovr, dict):
+                                return {"error": "Flag Overrides must be a JSON object like {\"key\": true}"}
+                        except _json.JSONDecodeError:
+                            return {"error": "❌ Flag Overrides must be valid JSON (e.g. {\"dark_mode\": true, \"beta\": false}). Leave empty for no overrides."}
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            return {"error": "Project not found"}
+                            return {"error": f"Project not found with ID '{pid.strip()}'. First create a project in the Analysis tab."}
                         existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
                         if existing:
-                            return {"error": f"Environment '{name}' already exists"}
+                            return {"error": f"Environment '{name}' already exists for this project"}
                         env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
                         db.add(env); db.commit(); db.refresh(env)
-                        result = {"id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
+                        result = {"status": "✅ Created!", "id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
 
                         return result
                     except Exception as e:

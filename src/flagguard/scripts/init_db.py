@@ -19,7 +19,7 @@ def init_db():
         print(f"Creating admin user: {admin_email}")
         user = User(
             email=admin_email,
-            hashed_password=get_password_hash("admin123"),
+            hashed_password=get_password_hash("Admin@123"),
             full_name="Admin User",
             role="admin",        # ← CRITICAL: must set explicitly (default is 'viewer')
             is_active=True
