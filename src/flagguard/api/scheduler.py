@@ -1,4 +1,7 @@
-"""Scheduled Scanning & CI/CD Integration API routes."""
+"""Scheduled Scanning & CI/CD Integration API routes.
+
+Now uses DB-persisted Schedule model (survives restarts).
+"""
 
 import threading
 import time
@@ -10,13 +13,11 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from flagguard.core.db import get_db, SessionLocal
-from flagguard.core.models.tables import Scan, ScanResult, Project, User
+from flagguard.core.models.tables import Scan, ScanResult, Project, User, Schedule
 from flagguard.api.auth import get_current_user, require_role, log_action
 
 router = APIRouter(prefix="/scheduler", tags=["Scheduled Scanning"])
 
-# In-memory schedule store (production would use Redis/Celery)
-_schedules = {}  # {project_id: {"interval_minutes": int, "active": bool, "last_run": datetime}}
 _scheduler_thread = None
 
 
@@ -63,13 +64,23 @@ def create_schedule(
     if schedule.interval_minutes < 5:
         raise HTTPException(status_code=400, detail="Minimum interval is 5 minutes")
     
-    _schedules[schedule.project_id] = {
-        "interval_minutes": schedule.interval_minutes,
-        "active": True,
-        "last_run": None,
-        "config_path": schedule.config_path,
-        "total_runs": 0,
-    }
+    # Check if schedule already exists for this project
+    existing = db.query(Schedule).filter(Schedule.project_id == schedule.project_id).first()
+    if existing:
+        existing.interval_minutes = schedule.interval_minutes
+        existing.config_path = schedule.config_path
+        existing.is_active = True
+    else:
+        existing = Schedule(
+            project_id=schedule.project_id,
+            interval_minutes=schedule.interval_minutes,
+            config_path=schedule.config_path,
+            is_active=True,
+        )
+        db.add(existing)
+    
+    db.commit()
+    db.refresh(existing)
     
     log_action(db, current_user.id, "create", "schedule", schedule.project_id,
                {"interval": schedule.interval_minutes})
@@ -77,15 +88,17 @@ def create_schedule(
     # Start background scheduler if not running
     _ensure_scheduler_running()
     
-    return _format_schedule(schedule.project_id)
+    return _format_schedule_row(existing)
 
 
 @router.get("/schedules", response_model=list[ScheduleOut])
 def list_schedules(
     current_user: Annotated[User, Depends(get_current_user)] = None,
+    db: Session = Depends(get_db)
 ):
     """List all active scan schedules."""
-    return [_format_schedule(pid) for pid in _schedules]
+    rows = db.query(Schedule).all()
+    return [_format_schedule_row(s) for s in rows]
 
 
 @router.delete("/schedules/{project_id}")
@@ -95,8 +108,10 @@ def delete_schedule(
     db: Session = Depends(get_db)
 ):
     """Stop scheduled scanning for a project (analyst+ only)."""
-    if project_id in _schedules:
-        _schedules[project_id]["active"] = False
+    sched = db.query(Schedule).filter(Schedule.project_id == project_id).first()
+    if sched:
+        sched.is_active = False
+        db.commit()
         log_action(db, current_user.id, "delete", "schedule", project_id)
         return {"status": "stopped"}
     raise HTTPException(status_code=404, detail="No schedule found for this project")
@@ -159,7 +174,6 @@ def ci_cd_check(
     db: Session = Depends(get_db)
 ):
     """CI/CD gate check -- use in PR pipelines to block/allow merges."""
-    # Get latest scan
     latest_scan = (
         db.query(Scan)
         .filter(Scan.project_id == project_id, Scan.status == "completed")
@@ -180,9 +194,8 @@ def ci_cd_check(
     summary = latest_scan.result_summary or {}
     total_conflicts = summary.get("conflict_count", 0) + summary.get("dependency_count", 0)
     health = summary.get("health_score", 100)
-    critical = summary.get("conflict_count", 0)  # Mutual exclusions are critical
+    critical = summary.get("conflict_count", 0)
     
-    # Determine pass/fail
     should_block = False
     status = "pass"
     
@@ -204,24 +217,23 @@ def ci_cd_check(
 
 
 # --- Helpers ---
-def _format_schedule(project_id: str) -> ScheduleOut:
-    sched = _schedules.get(project_id, {})
-    last_run = sched.get("last_run")
-    interval = sched.get("interval_minutes", 60)
+def _format_schedule_row(sched: Schedule) -> ScheduleOut:
+    last_run = sched.last_run
+    interval = sched.interval_minutes or 60
     
     next_run = None
-    if last_run and sched.get("active"):
+    if last_run and sched.is_active:
         from datetime import timedelta
         next_dt = last_run + timedelta(minutes=interval)
         next_run = str(next_dt)
     
     return ScheduleOut(
-        project_id=project_id,
+        project_id=sched.project_id,
         interval_minutes=interval,
-        is_active=sched.get("active", False),
+        is_active=sched.is_active,
         last_run=str(last_run) if last_run else None,
         next_run=next_run,
-        total_runs=sched.get("total_runs", 0),
+        total_runs=sched.total_runs or 0,
     )
 
 
@@ -236,28 +248,31 @@ def _ensure_scheduler_running():
 
 
 def _scheduler_loop():
-    """Background loop that checks and runs scheduled scans."""
+    """Background loop that checks and runs scheduled scans (reads from DB)."""
     while True:
-        for project_id, sched in list(_schedules.items()):
-            if not sched.get("active"):
-                continue
-            
-            interval = sched.get("interval_minutes", 60)
-            last_run = sched.get("last_run")
+        try:
+            db = SessionLocal()
+            active_schedules = db.query(Schedule).filter(Schedule.is_active == True).all()
             
             from datetime import timedelta
             now = datetime.utcnow()
             
-            should_run = last_run is None or (now - last_run) >= timedelta(minutes=interval)
+            for sched in active_schedules:
+                should_run = sched.last_run is None or (now - sched.last_run) >= timedelta(minutes=sched.interval_minutes)
+                
+                if should_run:
+                    try:
+                        _run_scheduled_scan(sched.project_id, sched.config_path or "")
+                        sched.last_run = now
+                        sched.total_runs = (sched.total_runs or 0) + 1
+                        db.commit()
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).error(f"Scheduled scan failed for {sched.project_id}: {e}")
             
-            if should_run:
-                try:
-                    _run_scheduled_scan(project_id, sched.get("config_path", ""))
-                    sched["last_run"] = now
-                    sched["total_runs"] = sched.get("total_runs", 0) + 1
-                except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).error(f"Scheduled scan failed for {project_id}: {e}")
+            db.close()
+        except Exception:
+            pass
         
         time.sleep(30)  # Check every 30 seconds
 

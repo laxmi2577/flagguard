@@ -175,3 +175,38 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")
+
+
+# --- Scheduled Scanning ---
+
+class Schedule(Base):
+    """Persisted scan schedule (survives server restarts)."""
+    __tablename__ = "schedules"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(String, ForeignKey("projects.id"), index=True, nullable=False)
+    interval_minutes = Column(Integer, default=60)
+    config_path = Column(String, default="")
+    is_active = Column(Boolean, default=True)
+    last_run = Column(DateTime, nullable=True)
+    total_runs = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
+
+
+# --- Plugin Registry ---
+
+class PluginConfig(Base):
+    """Persisted plugin configuration."""
+    __tablename__ = "plugins"
+
+    id = Column(String, primary_key=True)  # e.g. "launchdarkly", "mutual_exclusion"
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # "parser" or "rule"
+    description = Column(String, default="")
+    config = Column(JSON, default=dict)
+    is_builtin = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
