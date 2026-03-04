@@ -20,7 +20,9 @@ def init_db():
         user = User(
             email=admin_email,
             hashed_password=get_password_hash("admin123"),
-            full_name="Admin User"
+            full_name="Admin User",
+            role="admin",        # ← CRITICAL: must set explicitly (default is 'viewer')
+            is_active=True
         )
         db.add(user)
         db.commit()
