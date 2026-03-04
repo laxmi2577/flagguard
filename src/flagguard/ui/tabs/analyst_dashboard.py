@@ -2,19 +2,16 @@
 
 import gradio as gr
 from flagguard.ui.helpers import run_analysis
+from flagguard.ui.tabs.header import create_shared_header
 
 
 def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
     with gr.Group(visible=False) as dashboard:
 
-        # Header
+        # Header (notification bell + dark/light toggle built in)
         with gr.Row(elem_classes=["app-header"]):
-            with gr.Column(scale=5):
-                gr.HTML("<div style='display:flex;align-items:center;gap:14px;'><div style='width:38px;height:38px;background:linear-gradient(135deg,#d4af37,#f59e0b);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;'>🛡</div><div><div class='brand-text'>FlagGuard</div><div class='brand-subtitle'><span class='status-dot'></span>Operational</div></div></div>")
-            with gr.Column(scale=1, min_width=120):
-                gr.HTML("<span class='badge-analyst'>Analyst</span>")
-            with gr.Column(scale=1, min_width=100):
-                logout_btn = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm")
+            with gr.Column(scale=8):
+                header_html, logout_btn = create_shared_header("analyst", user_state)
 
         gr.HTML("<div class='role-banner-analyst'><b style='color:#f59e0b;'>🔬 You are an Analyst</b> — Create projects, run scans, manage environments, webhooks, reports, and IaC scans. User management requires Admin access.</div>")
 

@@ -41,3 +41,20 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def init_db() -> None:
+    """Create all tables on server start (auto-migration).
+    
+    Safe to call on every startup — SQLAlchemy only creates tables
+    that don't exist yet (CREATE TABLE IF NOT EXISTS).
+    Covers all models: User, Project, Environment, Scan, FlagDefinition,
+    WebhookConfig, AuditLog, PendingUser, Notification, etc.
+    """
+    import flagguard.core.models.tables  # Ensure all models are loaded into metadata
+    Base.metadata.create_all(bind=engine)
+
+
+# Auto-run migration when this module is imported (server startup)
+init_db()
+

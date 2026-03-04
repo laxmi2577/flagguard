@@ -5,7 +5,8 @@ markdown report, flag lifecycle (read-only), AI chat, notifications, profile.
 """
 
 import gradio as gr
-from flagguard.ui.helpers import run_analysis, get_user_notifications
+from flagguard.ui.helpers import run_analysis
+from flagguard.ui.tabs.header import create_shared_header
 
 
 def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
@@ -13,25 +14,10 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
 
     with gr.Group(visible=False) as dashboard:
 
-        # ── header ──────────────────────────────────────────────────────────
+        # ── header (notification bell + dark/light toggle built in) ────────
         with gr.Row(elem_classes=["app-header"]):
-            with gr.Column(scale=5):
-                gr.HTML("""
-                <div style='display:flex;align-items:center;gap:14px;'>
-                    <div style='width:38px;height:38px;background:linear-gradient(135deg,#d4af37,#f59e0b);
-                                border-radius:10px;display:flex;align-items:center;justify-content:center;
-                                font-size:1.2rem;'>🛡</div>
-                    <div>
-                        <div class='brand-text'>FlagGuard</div>
-                        <div class='brand-subtitle'><span class='status-dot'></span>Operational</div>
-                    </div>
-                </div>""")
-            with gr.Column(scale=1, min_width=150):
-                notif_html = gr.HTML("<div id='notif-area'></div>")
-            with gr.Column(scale=1, min_width=120):
-                gr.HTML("<span class='badge-viewer'>Viewer</span>")
-            with gr.Column(scale=1, min_width=100):
-                logout_btn = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm")
+            with gr.Column(scale=8):
+                header_html, logout_btn = create_shared_header("viewer", user_state)
 
         # ── role banner ──────────────────────────────────────────────────────
         gr.HTML("""

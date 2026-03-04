@@ -7,28 +7,16 @@ All Tier 2 and Tier 3 features are present here.
 
 import gradio as gr
 from flagguard.ui.helpers import run_analysis
+from flagguard.ui.tabs.header import create_shared_header
 
 
 def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
     with gr.Group(visible=False) as dashboard:
 
-        # ── Header ───────────────────────────────────────────────────────────
+        # ── Header (notification bell + dark/light toggle built in) ─────────
         with gr.Row(elem_classes=["app-header"]):
-            with gr.Column(scale=5):
-                gr.HTML("""
-                <div style='display:flex;align-items:center;gap:14px;'>
-                    <div style='width:38px;height:38px;background:linear-gradient(135deg,#ef4444,#dc2626);
-                                border-radius:10px;display:flex;align-items:center;justify-content:center;
-                                font-size:1.2rem;'>🛡</div>
-                    <div>
-                        <div class='brand-text'>FlagGuard</div>
-                        <div class='brand-subtitle'><span class='status-dot'></span>Admin Console</div>
-                    </div>
-                </div>""")
-            with gr.Column(scale=1, min_width=120):
-                gr.HTML("<span class='badge-admin'>Admin</span>")
-            with gr.Column(scale=1, min_width=100):
-                logout_btn = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm")
+            with gr.Column(scale=8):
+                header_html, logout_btn = create_shared_header("admin", user_state)
 
         # ── Role Banner ───────────────────────────────────────────────────────
         gr.HTML("""
