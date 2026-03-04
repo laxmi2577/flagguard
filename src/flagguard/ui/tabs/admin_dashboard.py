@@ -256,6 +256,45 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                 audit_refresh.click(load_audit, inputs=[audit_action, audit_resource],
                                     outputs=[audit_total_html, audit_today_html, audit_table])
 
+                # ── Audit Stats & Export ──────────────────────────────────
+                gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                gr.HTML("<div class='sidebar-title'>Top Actions</div>")
+                stats_btn = gr.Button("Load Audit Stats", elem_classes=["glass-btn"])
+                stats_result = gr.JSON(label="Top Actions & Users")
+                gr.HTML("<div style='margin:12px 0;'></div>")
+                with gr.Row():
+                    export_fmt = gr.Dropdown(label="Export Format", choices=["json", "csv"], value="json", scale=2)
+                    gr.HTML("<small style='color:#94a3b8;'>Download via: <a href='http://localhost:8000/api/v1/audit/export?format=csv' target='_blank' style='color:#d4af37;'>audit/export</a></small>")
+
+                def load_stats():
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import AuditLog
+                        from sqlalchemy import func
+                        db = SessionLocal()
+                        action_counts = (
+                            db.query(AuditLog.action, func.count(AuditLog.id).label("count"))
+                            .group_by(AuditLog.action)
+                            .order_by(func.count(AuditLog.id).desc())
+                            .limit(10).all()
+                        )
+                        user_counts = (
+                            db.query(AuditLog.user_id, func.count(AuditLog.id).label("count"))
+                            .filter(AuditLog.user_id.isnot(None))
+                            .group_by(AuditLog.user_id)
+                            .order_by(func.count(AuditLog.id).desc())
+                            .limit(5).all()
+                        )
+                        db.close()
+                        return {
+                            "top_actions": [{"action": a, "count": c} for a, c in action_counts],
+                            "top_users":   [{"user_id": u, "count": c} for u, c in user_counts]
+                        }
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                stats_btn.click(load_stats, outputs=[stats_result])
+
             # ─── Tab 4: Platform Analytics ────────────────────────────────────
             with gr.TabItem("📊 Analytics"):
                 with gr.Group(elem_classes=["glass-card"]):
@@ -454,13 +493,20 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                                 report_md = gr.Markdown("No scan data.")
 
                 def create_project(name, uid):
-                    if not name: return gr.update(), "Enter a project name."
+                    if not name:
+                        return gr.update(), "Enter a project name."
                     try:
-                        from flagguard.services.project import ProjectService
-                        svc = ProjectService()
-                        p = svc.create_project(name, uid)
-                        projs = svc.get_projects_for_user(uid)
-                        return gr.update(choices=[(p.name, p.id) for p in projs], value=p.id), f"Created: {name}"
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Project
+                        db = SessionLocal()
+                        # Admin creates project — uid is the owner
+                        p = Project(name=name, owner_id=uid, description="")
+                        db.add(p); db.commit(); db.refresh(p)
+                        # Reload ALL projects for admin
+                        projs = db.query(Project).order_by(Project.created_at.desc()).all()
+                        db.close()
+                        choices = [(f"{pr.name} (owner: {pr.owner_id[:8]}...)", pr.id) for pr in projs]
+                        return gr.update(choices=choices, value=p.id), f"Created project: {name}"
                     except Exception as e:
                         return gr.update(), f"Error: {e}"
 
@@ -588,15 +634,18 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
             if not uid: return gr.update(choices=[])
             try:
                 from flagguard.core.db import SessionLocal
-                from flagguard.core.models.tables import Project
+                from flagguard.core.models.tables import Project, User
                 db = SessionLocal()
                 projs = db.query(Project).order_by(Project.created_at.desc()).all()
+                # Show project name + owner email for admin context
+                user_map = {u.id: u.email for u in db.query(User).all()}
                 db.close()
-                return gr.update(choices=[(p.name, p.id) for p in projs],
-                                 value=projs[0].id if projs else None)
-            except Exception:
-                return gr.update(choices=[])
+                choices = [(f"{p.name}  [{user_map.get(p.owner_id, p.owner_id[:8])}]", p.id) for p in projs]
+                return gr.update(choices=choices, value=projs[0].id if projs else None)
+            except Exception as e:
+                return gr.update(choices=[], value=None)
 
         user_state.change(refresh_all_projects, inputs=[user_state], outputs=[project_selector])
 
     return dashboard, logout_btn
+

@@ -69,10 +69,15 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                     if not name or not uid:
                         return gr.update(), "Enter a project name."
                     try:
-                        from flagguard.services.project import ProjectService
-                        svc = ProjectService()
-                        p = svc.create_project(name, uid)
-                        projs = svc.get_projects_for_user(uid)
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Project
+                        db = SessionLocal()
+                        p = Project(name=name, owner_id=uid, description="")
+                        db.add(p); db.commit(); db.refresh(p)
+                        # Reload analyst's own projects
+                        projs = db.query(Project).filter(Project.owner_id == uid)\
+                                  .order_by(Project.created_at.desc()).all()
+                        db.close()
                         return gr.update(choices=[(p.name, p.id) for p in projs], value=p.id), f"Created: {name}"
                     except Exception as e:
                         return gr.update(), f"Error: {e}"
@@ -314,15 +319,21 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 change_pw_btn.click(do_change_pw, inputs=[user_state, curr_pw, new_pw, new_pw2], outputs=[pw_msg])
 
         def refresh_projects(uid):
-            if not uid: return gr.update(choices=[])
+            if not uid:
+                return gr.update(choices=[])
             try:
-                from flagguard.services.project import ProjectService
-                svc = ProjectService()
-                projs = svc.get_projects_for_user(uid)
-                return gr.update(choices=[(p.name, p.id) for p in projs], value=projs[0].id if projs else None)
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import Project
+                db = SessionLocal()
+                projs = db.query(Project).filter(Project.owner_id == uid)\
+                          .order_by(Project.created_at.desc()).all()
+                db.close()
+                return gr.update(choices=[(p.name, p.id) for p in projs],
+                                 value=projs[0].id if projs else None)
             except Exception:
                 return gr.update(choices=[])
 
         user_state.change(refresh_projects, inputs=[user_state], outputs=[project_selector])
 
     return dashboard, logout_btn
+
