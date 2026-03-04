@@ -179,3 +179,243 @@ def update_user(
     log_action(db, current_user.id, "update_user", "user", user_id, 
                {"changes": update.model_dump(exclude_none=True)})
     return user
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: str,
+    current_user: Annotated[User, Depends(require_role("admin"))],
+    db: Session = Depends(get_db)
+):
+    """Deactivate a user (admin only). Does not delete permanently."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
+    user.is_active = False
+    db.commit()
+    log_action(db, current_user.id, "deactivate_user", "user", user_id)
+    return {"status": "deactivated"}
+
+
+# --- Signup Request & Approval ---
+
+class SignupRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+    requested_role: str = "viewer"  # viewer or analyst
+    reason: str = ""
+
+class PendingUserOut(BaseModel):
+    id: str
+    full_name: str
+    email: str
+    requested_role: str
+    reason: str
+    status: str
+    requested_at: str | None
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/signup-request")
+def signup_request(req: SignupRequest, db: Session = Depends(get_db)):
+    """Submit a signup request (no auth needed). Admin must approve before login."""
+    from flagguard.core.models.tables import PendingUser
+    
+    # Check not already in users
+    if db.query(User).filter(User.email == req.email).first():
+        raise HTTPException(status_code=400, detail="Email already has an active account")
+    # Check not already pending
+    existing = db.query(PendingUser).filter(PendingUser.email == req.email).first()
+    if existing and existing.status == "pending":
+        raise HTTPException(status_code=400, detail="A pending request already exists for this email")
+    
+    if req.requested_role not in ("viewer", "analyst"):
+        raise HTTPException(status_code=400, detail="Role must be 'viewer' or 'analyst'")
+    
+    hashed = get_password_hash(req.password)
+    pending = PendingUser(
+        full_name=req.full_name,
+        email=req.email,
+        hashed_password=hashed,
+        requested_role=req.requested_role,
+        reason=req.reason,
+    )
+    db.add(pending)
+    db.commit()
+    return {"status": "pending", "message": "Your request has been submitted. An admin will review it shortly."}
+
+
+@router.get("/pending", response_model=list[PendingUserOut])
+def list_pending(
+    status_filter: str | None = None,
+    current_user: Annotated[User, Depends(require_role("admin"))] = None,
+    db: Session = Depends(get_db)
+):
+    """List all pending signup requests (admin only)."""
+    from flagguard.core.models.tables import PendingUser
+    q = db.query(PendingUser)
+    if status_filter:
+        q = q.filter(PendingUser.status == status_filter)
+    else:
+        q = q.filter(PendingUser.status == "pending")
+    return q.order_by(PendingUser.requested_at.desc()).all()
+
+
+@router.post("/approve/{pending_id}", response_model=UserOut)
+def approve_signup(
+    pending_id: str,
+    current_user: Annotated[User, Depends(require_role("admin"))],
+    db: Session = Depends(get_db)
+):
+    """Approve a signup request — creates User and sends notification (admin only)."""
+    from flagguard.core.models.tables import PendingUser, Notification
+    from datetime import datetime as dt
+    
+    pending = db.query(PendingUser).filter(PendingUser.id == pending_id).first()
+    if not pending:
+        raise HTTPException(status_code=404, detail="Pending request not found")
+    if pending.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request already {pending.status}")
+    
+    # Create the actual user
+    new_user = User(
+        email=pending.email,
+        hashed_password=pending.hashed_password,
+        full_name=pending.full_name,
+        role=pending.requested_role,
+        is_active=True,
+    )
+    db.add(new_user)
+    
+    # Update pending record
+    pending.status = "approved"
+    pending.reviewed_at = dt.utcnow()
+    pending.reviewed_by = current_user.id
+    
+    db.commit()
+    db.refresh(new_user)
+    
+    # Create notification for the new user
+    notif = Notification(
+        user_id=new_user.id,
+        title="Access Approved",
+        message=f"Your request for {pending.requested_role} access has been approved! You can now sign in.",
+        type="success",
+    )
+    db.add(notif)
+    db.commit()
+    
+    log_action(db, current_user.id, "approve_signup", "user", new_user.id, {"email": new_user.email})
+    return new_user
+
+
+@router.post("/reject/{pending_id}")
+def reject_signup(
+    pending_id: str,
+    reason: str = "Request denied by admin.",
+    current_user: Annotated[User, Depends(require_role("admin"))] = None,
+    db: Session = Depends(get_db)
+):
+    """Reject a signup request (admin only)."""
+    from flagguard.core.models.tables import PendingUser
+    from datetime import datetime as dt
+    
+    pending = db.query(PendingUser).filter(PendingUser.id == pending_id).first()
+    if not pending:
+        raise HTTPException(status_code=404, detail="Pending request not found")
+    if pending.status != "pending":
+        raise HTTPException(status_code=400, detail=f"Request already {pending.status}")
+    
+    pending.status = "rejected"
+    pending.reviewed_at = dt.utcnow()
+    pending.reviewed_by = current_user.id
+    pending.reason = reason  # store rejection reason
+    db.commit()
+    
+    log_action(db, current_user.id, "reject_signup", "pending_user", pending_id)
+    return {"status": "rejected"}
+
+
+# --- Notifications ---
+
+@router.get("/notifications")
+def get_notifications(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+    unread_only: bool = False
+):
+    """Get notifications for the current user."""
+    from flagguard.core.models.tables import Notification
+    q = db.query(Notification).filter(Notification.user_id == current_user.id)
+    if unread_only:
+        q = q.filter(Notification.is_read == False)
+    notifs = q.order_by(Notification.created_at.desc()).limit(50).all()
+    return [
+        {"id": n.id, "title": n.title, "message": n.message,
+         "type": n.type, "is_read": n.is_read, "created_at": str(n.created_at)}
+        for n in notifs
+    ]
+
+
+@router.post("/notifications/{notif_id}/read")
+def mark_notification_read(
+    notif_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """Mark a notification as read."""
+    from flagguard.core.models.tables import Notification
+    n = db.query(Notification).filter(
+        Notification.id == notif_id, Notification.user_id == current_user.id
+    ).first()
+    if n:
+        n.is_read = True
+        db.commit()
+    return {"status": "ok"}
+
+
+# --- Password Reset (admin resets any user) ---
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
+
+@router.post("/change-password")
+def change_password(
+    body: PasswordChange,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """Change own password."""
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = get_password_hash(body.new_password)
+    db.commit()
+    log_action(db, current_user.id, "change_password", "user", current_user.id)
+    return {"status": "password changed"}
+
+
+@router.post("/reset-password/{user_id}")
+def admin_reset_password(
+    user_id: str,
+    body: AdminPasswordReset,
+    current_user: Annotated[User, Depends(require_role("admin"))],
+    db: Session = Depends(get_db)
+):
+    """Admin resets any user's password."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.hashed_password = get_password_hash(body.new_password)
+    db.commit()
+    log_action(db, current_user.id, "reset_password", "user", user_id)
+    return {"status": "password reset"}
+

@@ -139,3 +139,39 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="audit_logs")
+
+
+# --- Signup Approval ---
+
+class PendingUser(Base):
+    """Signup request awaiting admin approval."""
+    __tablename__ = "pending_users"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    full_name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    requested_role = Column(String, default="viewer")  # analyst or viewer
+    reason = Column(Text, default="")
+    status = Column(String, default="pending")  # pending, approved, rejected
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(String, ForeignKey("users.id"), nullable=True)
+
+
+# --- Notifications ---
+
+class Notification(Base):
+    """User notifications for events and alerts."""
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String, default="info")  # info, success, warning, error
+    is_read = Column(Boolean, default=False)
+    link = Column(String, nullable=True)  # optional deep-link
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
