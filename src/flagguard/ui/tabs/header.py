@@ -3,12 +3,13 @@
 Provides:
 - Brand logo + status dot
 - Dark / Light mode toggle (Feature D)
-- Notification bell with unread count dropdown (Feature A)
+- Notification bell with unread count (Feature A) — loads real data from DB
 - Role badge
 - Sign Out button
 """
 
 import gradio as gr
+
 
 # JS injected once to manage dark/light mode via body class
 DARK_LIGHT_JS = """
@@ -22,29 +23,22 @@ DARK_LIGHT_JS = """
     window.fgToggleTheme = function() {
         var isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('fg_theme', isLight ? 'light' : 'dark');
-        var btn = document.getElementById('theme-toggle-btn');
-        if (btn) btn.innerHTML = isLight ? '☀️ Light' : '🌙 Dark';
+        var btns = document.querySelectorAll('.theme-toggle-btn');
+        btns.forEach(function(btn) {
+            btn.innerHTML = isLight ? '☀️ Light' : '🌙 Dark';
+        });
     };
 })();
 </script>
 """
 
-NOTIF_PANEL_JS = """
-<script>
-window.fgToggleNotif = function() {
-    var panel = document.getElementById('notif-panel');
-    if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-};
-</script>
-"""
 
-
-def build_header_html(role: str, notif_count: int = 0) -> str:
+def build_header_html(role: str, notif_count: int = 0, notifications: list = None) -> str:
     """Build the full header HTML with brand, notifications, theme toggle and role badge."""
     badge_class = f"badge-{role}"
     role_label  = role.upper()
+    uid = f"notif-{role}"  # unique ID per role to avoid BUG-18
 
-    notif_color  = "#ef4444" if notif_count > 0 else "#555"
     notif_count_label = str(notif_count) if notif_count <= 9 else "9+"
     notif_count_html  = (
         f"<span style='position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;"
@@ -53,9 +47,23 @@ def build_header_html(role: str, notif_count: int = 0) -> str:
         if notif_count > 0 else ""
     )
 
+    # Build notification items HTML from real data
+    if notifications:
+        notif_items = ""
+        for n in notifications:
+            type_colors = {"success": "#30d158", "warning": "#f59e0b", "error": "#ef4444", "info": "#3b82f6"}
+            dot_color = type_colors.get(n.get("type", "info"), "#3b82f6")
+            notif_items += f"""
+            <div class='notif-item'>
+                <div class='notif-title'><span style='color:{dot_color};'>●</span> {n.get('title', '')}</div>
+                <div>{n.get('message', '')}</div>
+            </div>"""
+    else:
+        notif_items = "<div class='notif-empty'>No new notifications</div>"
+
     return f"""
     <style>
-    #notif-panel {{
+    #{uid}-panel {{
         display: none;
         position: absolute;
         top: 52px; right: 12px;
@@ -68,14 +76,14 @@ def build_header_html(role: str, notif_count: int = 0) -> str:
         box-shadow: 0 8px 40px rgba(0,0,0,0.5);
         font-family: 'Inter', sans-serif;
     }}
-    #notif-panel .notif-item {{
+    #{uid}-panel .notif-item {{
         padding: 10px 0;
         border-bottom: 1px solid rgba(212,175,55,0.06);
         font-size: 0.8rem;
         color: #e2e8f0;
     }}
-    #notif-panel .notif-title {{ font-weight:600; color:#d4af37; margin-bottom:2px; }}
-    #notif-panel .notif-empty {{ text-align:center; color:#94a3b8; padding:12px 0; }}
+    #{uid}-panel .notif-title {{ font-weight:600; color:#d4af37; margin-bottom:2px; }}
+    #{uid}-panel .notif-empty {{ text-align:center; color:#94a3b8; padding:12px 0; }}
     </style>
 
     <div style='display:flex;align-items:center;gap:12px;padding:12px 0;position:relative;flex-wrap:wrap;'>
@@ -92,21 +100,21 @@ def build_header_html(role: str, notif_count: int = 0) -> str:
         </div>
 
         <!-- Notification Bell (Feature A) -->
-        <div style='position:relative;cursor:pointer;' onclick='fgToggleNotif()' title='Notifications'>
+        <div style='position:relative;cursor:pointer;' onclick='(function(){{ var p=document.getElementById("{uid}-panel"); if(p) p.style.display=p.style.display==="none"?"block":"none"; }})()' title='Notifications'>
             <span style='font-size:1.3rem;'>🔔</span>
             {notif_count_html}
         </div>
 
         <!-- Notification dropdown panel -->
-        <div id='notif-panel'>
+        <div id='{uid}-panel'>
             <div style='font-family:Outfit,sans-serif;font-weight:700;color:#d4af37;margin-bottom:12px;font-size:0.9rem;'>
-                🔔 Notifications
+                🔔 Notifications ({notif_count})
             </div>
-            <div id='notif-list' class='notif-empty'>Loading...</div>
+            {notif_items}
         </div>
 
         <!-- Dark/Light Toggle (Feature D) -->
-        <button id='theme-toggle-btn'
+        <button class='theme-toggle-btn'
             onclick='fgToggleTheme()'
             style='background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.2);
                    border-radius:8px;color:#94a3b8;font-size:0.75rem;cursor:pointer;
@@ -122,7 +130,6 @@ def build_header_html(role: str, notif_count: int = 0) -> str:
 
     <!-- Inject JS once -->
     {DARK_LIGHT_JS}
-    {NOTIF_PANEL_JS}
     """
 
 
@@ -135,19 +142,21 @@ def create_shared_header(role: str, user_state: gr.State) -> tuple:
     logout_btn  = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm", min_width=90)
 
     def refresh_notif_header(uid):
-        """Reload notification count when user logs in."""
+        """Reload notification count and data when user logs in."""
         if not uid:
             return build_header_html(role, 0)
         try:
             from flagguard.core.db import SessionLocal
             from flagguard.core.models.tables import Notification
             db = SessionLocal()
-            count = db.query(Notification).filter(
+            notifs = db.query(Notification).filter(
                 Notification.user_id == uid,
                 Notification.is_read == False
-            ).count()
+            ).order_by(Notification.created_at.desc()).limit(10).all()
+            count = len(notifs)
+            notif_list = [{"title": n.title, "message": n.message, "type": n.type} for n in notifs]
             db.close()
-            return build_header_html(role, count)
+            return build_header_html(role, count, notif_list)
         except Exception:
             return build_header_html(role, 0)
 

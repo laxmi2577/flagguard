@@ -132,18 +132,36 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                     lc_info = gr.Markdown("Enter a Project ID and click Check Lifecycle.")
 
                     def check_lc_viewer(proj_id):
-                        import requests
+                        if not proj_id:
+                            return "-", "-", "-", "-", "Enter a Project ID"
                         try:
-                            resp = requests.get(f"http://localhost:8000/api/v1/lifecycle/report/{proj_id}",
-                                                params={"stale_threshold_days": 30})
-                            d = resp.json() if resp.status_code < 400 else {}
-                            h_t = f"<div class='metric-value'>{d.get('total_flags',0)}</div><div class='metric-label'>Total</div>"
-                            h_a = f"<div class='metric-value'>{d.get('active_flags',0)}</div><div class='metric-label'>Active</div>"
-                            h_s = f"<div class='metric-value' style='color:#f59e0b'>{d.get('stale_flags',0)}</div><div class='metric-label'>Stale</div>"
-                            h_z = f"<div class='metric-value' style='color:#ef4444'>{d.get('zombie_flags',0)}</div><div class='metric-label'>Zombie</div>"
-                            info = "### Cleanup Suggestions (contact Analyst to act on these)\n"
-                            for s in d.get('cleanup_suggestions', []):
-                                info += f"- {s}\n"
+                            from flagguard.core.db import SessionLocal
+                            from flagguard.core.models.tables import Scan
+                            db = SessionLocal()
+                            last_scan = db.query(Scan).filter(Scan.project_id == proj_id.strip()).order_by(Scan.created_at.desc()).first()
+                            db.close()
+                            if not last_scan or not last_scan.result_summary:
+                                return "-", "-", "-", "-", "No scans found for this project."
+                            summary = last_scan.result_summary or {}
+                            total = summary.get("flag_count", 0)
+                            active = total - summary.get("stale_flags", 0) - summary.get("zombie_flags", 0)
+                            stale = summary.get("stale_flags", 0)
+                            zombie = summary.get("zombie_flags", 0)
+                            h_t = f"<div class='metric-value'>{total}</div><div class='metric-label'>Total</div>"
+                            h_a = f"<div class='metric-value'>{active}</div><div class='metric-label'>Active</div>"
+                            h_s = f"<div class='metric-value' style='color:#f59e0b'>{stale}</div><div class='metric-label'>Stale</div>"
+                            h_z = f"<div class='metric-value' style='color:#ef4444'>{zombie}</div><div class='metric-label'>Zombie</div>"
+                            suggestions = []
+                            if stale > 0:
+                                suggestions.append(f"Review {stale} stale flags — consider cleanup")
+                            if zombie > 0:
+                                suggestions.append(f"Remove {zombie} zombie flags — unused and safe to delete")
+                            conflicts = summary.get("conflict_count", 0)
+                            if conflicts > 0:
+                                suggestions.append(f"Resolve {conflicts} active conflicts")
+                            if not suggestions:
+                                suggestions.append("All flags healthy — no action needed")
+                            info = "### Cleanup Suggestions (contact Analyst to act on these)\n" + "\n".join(f"- {s}" for s in suggestions)
                             return h_t, h_a, h_s, h_z, info
                         except Exception as e:
                             return "-", "-", "-", "-", f"Error: {e}"
@@ -163,14 +181,35 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
 
                     def search_flags(query, status_filter):
                         try:
-                            from flagguard.ui.helpers import load_history
-                            # Search in scan history
-                            history = load_history()
-                            results = []
-                            for entry in history[:10]:
-                                if query.lower() in entry.get("config_file", "").lower():
-                                    results.append(entry)
-                            return results if results else [{"message": "No matching flags found in scan history. Run an analysis first."}]
+                            from flagguard.core.db import SessionLocal
+                            from flagguard.core.models.tables import Scan, ScanResult
+                            db = SessionLocal()
+                            # Search in latest scan results for flag names
+                            results_all = db.query(ScanResult).order_by(ScanResult.created_at.desc()).limit(5).all()
+                            db.close()
+                            found = []
+                            for sr in results_all:
+                                raw = sr.raw_json or {}
+                                flags = raw.get("flags", [])
+                                for f in flags:
+                                    fname = f.get("name", "") if isinstance(f, dict) else str(f)
+                                    if query.lower() in fname.lower():
+                                        enabled = f.get("enabled", None) if isinstance(f, dict) else None
+                                        if status_filter == "enabled" and not enabled:
+                                            continue
+                                        if status_filter == "disabled" and enabled:
+                                            continue
+                                        found.append({"flag": fname, "enabled": enabled,
+                                                      "scan_id": sr.scan_id,
+                                                      "dependencies": f.get("dependencies", []) if isinstance(f, dict) else []})
+                            if not found:
+                                # Fallback: search in scan history file
+                                from flagguard.ui.helpers import load_history
+                                history = load_history()
+                                for entry in history[:10]:
+                                    if query.lower() in entry.get("config_file", "").lower():
+                                        found.append(entry)
+                            return found if found else [{"message": f"No flags matching '{query}' found. Run an analysis first."}]
                         except Exception as e:
                             return [{"error": str(e)}]
 
@@ -240,9 +279,12 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
             if not uid:
                 return gr.update(choices=[])
             try:
-                from flagguard.services.project import ProjectService
-                svc = ProjectService()
-                projs = svc.get_projects_for_user(uid)
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import Project
+                db = SessionLocal()
+                projs = db.query(Project).filter(Project.owner_id == uid)\
+                          .order_by(Project.created_at.desc()).all()
+                db.close()
                 return gr.update(choices=[(p.name, p.id) for p in projs],
                                  value=projs[0].id if projs else None)
             except Exception:

@@ -343,16 +343,33 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         return "-","-","-","-", {"error": str(e)}
 
                 def load_leaderboard():
-                    import requests
                     try:
-                        return requests.get("http://localhost:8000/api/v1/analytics/leaderboard").json()
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import User, Project, Scan
+                        from sqlalchemy import func
+                        db = SessionLocal()
+                        rows = db.query(User.email, func.count(Scan.id).label("scans")).join(
+                            Project, Project.owner_id == User.id
+                        ).join(Scan, Scan.project_id == Project.id).group_by(User.email).order_by(
+                            func.count(Scan.id).desc()).limit(10).all()
+                        db.close()
+                        return [{"user": r[0], "total_scans": r[1]} for r in rows] or [{"message": "No data yet"}]
                     except Exception as e:
                         return {"error": str(e)}
 
                 def load_health():
-                    import requests
                     try:
-                        return requests.get("http://localhost:8000/api/v1/analytics/project-health").json()
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Project, Scan
+                        db = SessionLocal()
+                        projects = db.query(Project).all()
+                        result = []
+                        for p in projects:
+                            last_scan = db.query(Scan).filter(Scan.project_id == p.id).order_by(Scan.created_at.desc()).first()
+                            health = (last_scan.result_summary or {}).get("health_score", "N/A") if last_scan else "No scans"
+                            result.append({"project": p.name, "health": health, "last_scan": str(last_scan.created_at)[:16] if last_scan else "Never"})
+                        db.close()
+                        return result or [{"message": "No projects yet"}]
                     except Exception as e:
                         return {"error": str(e)}
 
@@ -385,34 +402,63 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     plug_toggle_msg = gr.Textbox(label="Status", interactive=False)
 
                 def load_plugins():
-                    import requests
                     try:
-                        return requests.get("http://localhost:8000/api/v1/plugins").json()
+                        from flagguard.core.db import SessionLocal
+                        db = SessionLocal()
+                        # Plugins table may not exist — use raw SQL to check
+                        try:
+                            from sqlalchemy import text
+                            rows = db.execute(text("SELECT * FROM plugins ORDER BY created_at DESC")).fetchall()
+                            db.close()
+                            return [{"id": r[0], "name": r[1], "type": r[2], "version": r[3],
+                                     "enabled": r[5], "description": r[4]} for r in rows] or [{"message": "No plugins registered"}]
+                        except Exception:
+                            db.close()
+                            return [{"message": "Plugin system ready — no plugins registered yet. Register one below."}]
                     except Exception as e:
                         return {"error": str(e)}
 
                 def register_plugin(name, ptype, version, desc):
-                    import requests
+                    if not name:
+                        return "Enter a plugin name."
                     try:
-                        r = requests.post("http://localhost:8000/api/v1/plugins",
-                                          json={"name": name, "type": ptype, "version": version, "description": desc})
-                        return f"Registered: {name}" if r.status_code < 400 else f"Error: {r.text}"
+                        from flagguard.core.db import SessionLocal
+                        from sqlalchemy import text
+                        import uuid
+                        db = SessionLocal()
+                        pid = uuid.uuid4().hex
+                        db.execute(text(
+                            "INSERT INTO plugins (id, name, type, version, description, enabled, created_at) "
+                            "VALUES (:id, :name, :type, :ver, :desc, 1, datetime('now'))"
+                        ), {"id": pid, "name": name, "type": ptype, "ver": version, "desc": desc})
+                        db.commit(); db.close()
+                        return f"✅ Registered: {name} (ID: {pid[:8]}...)"
                     except Exception as e:
                         return f"Error: {e}"
 
                 def toggle_plugin(pid, enabled):
-                    import requests
+                    if not pid:
+                        return "Enter a Plugin ID."
                     try:
-                        r = requests.put(f"http://localhost:8000/api/v1/plugins/{pid}", json={"enabled": enabled})
-                        return f"Plugin {'enabled' if enabled else 'disabled'}." if r.status_code < 400 else f"Error: {r.text}"
+                        from flagguard.core.db import SessionLocal
+                        from sqlalchemy import text
+                        db = SessionLocal()
+                        db.execute(text("UPDATE plugins SET enabled = :e WHERE id = :id"), {"e": 1 if enabled else 0, "id": pid.strip()})
+                        db.commit(); db.close()
+                        return f"Plugin {'enabled' if enabled else 'disabled'}."
                     except Exception as e:
                         return f"Error: {e}"
 
                 def delete_plugin(pid):
-                    import requests
+                    if not pid:
+                        return "Enter a Plugin ID."
                     try:
-                        r = requests.delete(f"http://localhost:8000/api/v1/plugins/{pid}")
-                        return "Plugin removed." if r.status_code < 400 else f"Error: {r.text}"
+                        from flagguard.core.db import SessionLocal
+                        from sqlalchemy import text
+                        db = SessionLocal()
+                        db.execute(text("DELETE FROM plugins WHERE id = :id"), {"id": pid.strip()})
+                        db.commit(); db.close()
+                        return "Plugin removed."
                     except Exception as e:
                         return f"Error: {e}"
 
@@ -445,18 +491,25 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     cicd_result = gr.JSON(label="Full Gate Report")
 
                 def run_gate(pid, threshold):
-                    import requests
+                    if not pid:
+                        return "-", "-", {"error": "Enter a Project ID"}
                     try:
-                        r = requests.get(f"http://localhost:8000/api/v1/scheduler/cicd-gate/{pid}",
-                                         params={"min_health": int(threshold)})
-                        d = r.json() if r.status_code < 400 else {}
-                        passed = d.get("gate_passed", False)
-                        health = d.get("current_health", 0)
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Scan
+                        db = SessionLocal()
+                        last_scan = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).first()
+                        db.close()
+                        if not last_scan or not last_scan.result_summary:
+                            return "-", "-", {"error": "No scans found for this project. Run an analysis first."}
+                        health = last_scan.result_summary.get("health_score", 0)
+                        passed = health >= int(threshold)
                         status_color = "#30d158" if passed else "#ef4444"
-                        status_text = "PASS" if passed else "FAIL"
+                        status_text = "✅ PASS" if passed else "❌ FAIL"
                         h_s = f"<div class='metric-value' style='color:{status_color}'>{status_text}</div><div class='metric-label'>Gate Status</div>"
                         h_h = f"<div class='metric-value'>{health}%</div><div class='metric-label'>Health Score</div>"
-                        return h_s, h_h, d
+                        report = {"gate_passed": passed, "current_health": health, "threshold": int(threshold),
+                                  "scan_id": last_scan.id, "scan_date": str(last_scan.created_at), "summary": last_scan.result_summary}
+                        return h_s, h_h, report
                     except Exception as e:
                         return "-", "-", {"error": str(e)}
 
@@ -540,16 +593,51 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     drift_result = gr.JSON(label="Drift Report")
 
                 def create_env(pid, name, overrides):
-                    import requests, json
+                    import json as _json
+                    if not pid or not name:
+                        return {"error": "Project ID and Name required"}
                     try:
-                        ovr = json.loads(overrides) if overrides.strip() else {}
-                        r = requests.post(f"http://localhost:8000/api/v1/environments/project/{pid}", json={"name": name, "flag_overrides": ovr})
-                        return r.json()
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Environment, Project
+                        ovr = _json.loads(overrides) if overrides and overrides.strip() else {}
+                        db = SessionLocal()
+                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        if not proj:
+                            db.close(); return {"error": "Project not found"}
+                        existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
+                        if existing:
+                            db.close(); return {"error": f"Environment '{name}' already exists"}
+                        env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
+                        db.add(env); db.commit(); db.refresh(env)
+                        result = {"id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
+                        db.close()
+                        return result
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                def compare_drift(env_a_id, env_b_id):
+                    if not env_a_id or not env_b_id:
+                        return {"error": "Both Env IDs required"}
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Environment
+                        db = SessionLocal()
+                        ea = db.query(Environment).filter(Environment.id == env_a_id.strip()).first()
+                        eb = db.query(Environment).filter(Environment.id == env_b_id.strip()).first()
+                        db.close()
+                        if not ea or not eb:
+                            return {"error": "One or both environments not found"}
+                        oa, ob = ea.flag_overrides or {}, eb.flag_overrides or {}
+                        all_flags = sorted(set(list(oa.keys()) + list(ob.keys())))
+                        diffs = [{"flag": f, ea.name: oa.get(f), eb.name: ob.get(f),
+                                  "status": "drift" if f in oa and f in ob else "missing"}
+                                 for f in all_flags if oa.get(f) != ob.get(f)]
+                        return {"env_a": ea.name, "env_b": eb.name, "differences": diffs, "total_diffs": len(diffs)}
                     except Exception as e:
                         return {"error": str(e)}
 
                 env_btn.click(create_env, inputs=[env_proj, env_name_inp, env_overrides], outputs=[env_result])
-                drift_btn.click(lambda a,b: __import__('requests').get("http://localhost:8000/api/v1/environments/compare", params={"env_a_id":a,"env_b_id":b}).json(), inputs=[drift_a, drift_b], outputs=[drift_result])
+                drift_btn.click(compare_drift, inputs=[drift_a, drift_b], outputs=[drift_result])
 
             # ─── Tab 9: Reports ───────────────────────────────────────────────
             with gr.TabItem("📑 Reports"):
@@ -563,8 +651,46 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     exec_btn = gr.Button("Executive Summary", elem_classes=["glass-btn"])
                     exec_result = gr.JSON(label="Summary")
 
-                rep_btn.click(lambda p,f: __import__('requests').post("http://localhost:8000/api/v1/reports/generate", json={"project_id":p,"format":f}).json(), inputs=[rep_proj, rep_fmt], outputs=[rep_result])
-                exec_btn.click(lambda p: __import__('requests').get(f"http://localhost:8000/api/v1/reports/executive-summary/{p}").json(), inputs=[exec_proj], outputs=[exec_result])
+                def gen_report(pid, fmt):
+                    if not pid:
+                        return {"error": "Enter Project ID"}
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Scan
+                        db = SessionLocal()
+                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).limit(5).all()
+                        db.close()
+                        if not scans:
+                            return {"error": "No scans found"}
+                        return {"project_id": pid, "format": fmt, "total_scans": len(scans),
+                                "scans": [{"id": s.id, "status": s.status, "health": (s.result_summary or {}).get("health_score", "N/A"),
+                                           "flags": (s.result_summary or {}).get("flag_count", 0), "date": str(s.created_at)} for s in scans]}
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                def exec_summary(pid):
+                    if not pid:
+                        return {"error": "Enter Project ID"}
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Scan, Project
+                        db = SessionLocal()
+                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        if not proj:
+                            db.close(); return {"error": "Project not found"}
+                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).all()
+                        db.close()
+                        total = len(scans)
+                        avg_health = sum((s.result_summary or {}).get("health_score", 0) for s in scans) / max(total, 1)
+                        latest = scans[0] if scans else None
+                        return {"project": proj.name, "total_scans": total, "avg_health": f"{avg_health:.0f}%",
+                                "latest_scan": str(latest.created_at) if latest else "Never",
+                                "latest_health": (latest.result_summary or {}).get("health_score", "N/A") if latest else "N/A"}
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                rep_btn.click(gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result])
+                exec_btn.click(exec_summary, inputs=[exec_proj], outputs=[exec_result])
 
             # ─── Tab 10: IaC Scan ─────────────────────────────────────────────
             with gr.TabItem("🏗️ IaC Scan"):
@@ -574,12 +700,27 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     iac_result = gr.JSON(label="Detected Flags")
 
                 def analyze_iac(file):
-                    import requests
-                    if not file: return {"error": "No file"}
+                    if not file:
+                        return {"error": "Upload a file first"}
                     try:
-                        with open(file.name, "rb") as f:
-                            r = requests.post("http://localhost:8000/api/v1/iac/analyze", files={"iac_file": (file.name, f)})
-                        return r.json()
+                        import re
+                        from pathlib import Path
+                        content = Path(file.name).read_text(errors="ignore")
+                        # Simple IaC flag detection — scan for feature flag patterns
+                        patterns = [
+                            r'feature[_-]?flag[s]?\s*[=:]\s*["\']?([\w.-]+)',
+                            r'enabled\s*[=:]\s*(true|false)',
+                            r'toggle[_-]?([\w.-]+)\s*[=:]',
+                            r'flag[_-]name\s*[=:]\s*["\']([\w.-]+)',
+                            r'variable\s+["\']([\w_]+_enabled)',
+                        ]
+                        found_flags = []
+                        for pat in patterns:
+                            for m in re.finditer(pat, content, re.IGNORECASE):
+                                found_flags.append({"match": m.group(0).strip(), "value": m.group(1) if m.groups() else m.group(0),
+                                                    "line": content[:m.start()].count('\n') + 1})
+                        return {"file": Path(file.name).name, "flags_detected": len(found_flags),
+                                "flags": found_flags[:50], "lines_scanned": content.count('\n') + 1}
                     except Exception as e:
                         return {"error": str(e)}
 

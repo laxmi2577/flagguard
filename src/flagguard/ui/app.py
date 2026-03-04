@@ -234,13 +234,15 @@ def create_app():
 
         # ── Logout (all 3 dashboards share same logic) ────────────────────────
         def do_logout():
-            return (gr.update(visible=True),   # login_view
+            return ("",          # clear user_id state
+                    "viewer",    # reset user_role state
+                    gr.update(visible=True),   # login_view
                     gr.update(visible=False),   # viewer_dash
                     gr.update(visible=False),   # analyst_dash
                     gr.update(visible=False))   # admin_dash
 
         for btn in [viewer_logout, analyst_logout, admin_logout]:
-            btn.click(do_logout, outputs=[login_view, viewer_dash, analyst_dash, admin_dash])
+            btn.click(do_logout, outputs=[user_id, user_role, login_view, viewer_dash, analyst_dash, admin_dash])
 
     return app
 
