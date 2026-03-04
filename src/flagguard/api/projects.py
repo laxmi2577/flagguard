@@ -23,7 +23,7 @@ class ProjectOut(BaseModel):
     name: str
     description: str | None
     owner_id: str
-    created_at: str | None
+    created_at: object | None = None
 
     class Config:
         from_attributes = True
@@ -33,7 +33,7 @@ class ScanSummary(BaseModel):
     status: str
     triggered_by: str | None
     result_summary: dict | None
-    created_at: str | None
+    created_at: object | None = None
 
     class Config:
         from_attributes = True
