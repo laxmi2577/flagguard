@@ -64,12 +64,12 @@ class Scan(Base):
     __tablename__ = "scans"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    project_id = Column(String, ForeignKey("projects.id"))
+    project_id = Column(String, ForeignKey("projects.id"), index=True)
     environment_id = Column(String, ForeignKey("environments.id"), nullable=True)
     triggered_by = Column(String)  # 'manual', 'api', 'webhook', 'scheduled'
     status = Column(String, default="pending")  # pending, running, completed, failed
     result_summary = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     project = relationship("Project", back_populates="scans")
     environment = relationship("Environment")
@@ -130,7 +130,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     action = Column(String, nullable=False)  # create, update, delete, scan, login
     resource_type = Column(String)  # project, scan, flag, webhook, environment
     resource_id = Column(String, nullable=True)
@@ -166,11 +166,11 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     type = Column(String, default="info")  # info, success, warning, error
-    is_read = Column(Boolean, default=False)
+    is_read = Column(Boolean, default=False, index=True)
     link = Column(String, nullable=True)  # optional deep-link
     created_at = Column(DateTime, default=datetime.utcnow)
 

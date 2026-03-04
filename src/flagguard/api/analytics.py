@@ -98,7 +98,8 @@ def project_health_cards(
     db: Session = Depends(get_db)
 ):
     """Get health cards for all projects (dashboard cards)."""
-    projects = db.query(Project).all()
+    from sqlalchemy.orm import joinedload
+    projects = db.query(Project).options(joinedload(Project.owner)).all()
     cards = []
 
     for project in projects:
