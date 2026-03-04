@@ -176,8 +176,10 @@ def create_app():
                 return "<div style='color:#ef4444;'>All fields required.</div>"
             if pw != pw2:
                 return "<div style='color:#ef4444;'>Passwords do not match.</div>"
-            if len(pw) < 6:
-                return "<div style='color:#ef4444;'>Password must be at least 6 characters.</div>"
+            from flagguard.auth.utils import validate_password
+            pw_errors = validate_password(pw)
+            if pw_errors:
+                return "<div style='color:#ef4444;'>" + "<br>".join(pw_errors) + "</div>"
             try:
                 from flagguard.core.db import SessionLocal
                 from flagguard.core.models.tables import User, PendingUser

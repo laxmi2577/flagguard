@@ -126,10 +126,43 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Sessio
     """Login and receive JWT token."""
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
+        # Log failed login attempt for security auditing
+        _failed_user_id = user.id if user else None
+        try:
+            failed_log = AuditLog(
+                user_id=_failed_user_id,
+                action="login_failed",
+                resource_type="auth",
+                resource_id=form_data.username,
+                details={"reason": "invalid_credentials"}
+            )
+            db.add(failed_log)
+            db.commit()
+        except Exception:
+            pass  # Don't let audit logging failure prevent error response
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if not user.is_active:
+        # Log disabled account login attempt
+        try:
+            disabled_log = AuditLog(
+                user_id=user.id,
+                action="login_failed",
+                resource_type="auth",
+                resource_id=user.email,
+                details={"reason": "account_disabled"}
+            )
+            db.add(disabled_log)
+            db.commit()
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is disabled. Contact admin.",
         )
     
     access_token = create_access_token(

@@ -6,10 +6,11 @@ Run: uvicorn flagguard.api.server:app --port 8000
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from flagguard.core.db import engine, Base
+from flagguard.core.db import engine, Base, SessionLocal
 from flagguard.core.models.tables import (
     User, Project, Scan, ScanResult, 
     Environment, WebhookConfig, AuditLog
@@ -17,6 +18,20 @@ from flagguard.core.models.tables import (
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
+
+# --- Rate Limiting Setup ---
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+
+    limiter = Limiter(key_func=get_remote_address)
+    _has_limiter = True
+except ImportError:
+    # slowapi not installed — run without rate limiting
+    limiter = None
+    _has_limiter = False
+
 
 # --- FastAPI App ---
 app = FastAPI(
@@ -34,15 +49,24 @@ app = FastAPI(
         "- Scheduled scanning & CI/CD gate checks\n"
         "- Python SDK\n"
     ),
-    version="2.1.0",
+    version="2.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# CORS
+# Rate limiter state
+if _has_limiter:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS — locked to Gradio UI origin (not wildcard)
+ALLOWED_ORIGINS = os.getenv(
+    "CORS_ORIGINS", "http://localhost:7860,http://127.0.0.1:7860"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,18 +111,28 @@ def health_check():
     return {
         "status": "healthy",
         "service": "FlagGuard API",
-        "version": "2.1.0",
+        "version": "2.2.0",
         "docs": "/docs"
     }
 
 
 @app.get("/api/v1/health", tags=["Health"])
 def api_health():
-    """Detailed API health check."""
+    """Detailed API health check — actually tests DB connectivity."""
+    db_status = "error"
+    try:
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {e}"
+
     return {
-        "status": "operational",
+        "status": "operational" if db_status == "connected" else "degraded",
         "components": {
-            "database": "connected",
+            "database": db_status,
             "auth": "ready",
             "webhooks": "ready",
             "analysis_engine": "ready"

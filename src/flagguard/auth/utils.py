@@ -1,20 +1,44 @@
 """Authentication utilities."""
 
 import os
+import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-# Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key_change_in_prod")
+_log = logging.getLogger(__name__)
+
+# ── Configuration ────────────────────────────────────────────────────────────
+_DEFAULT_SECRET = "dev_secret_key_change_in_prod"
+SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
+
+if SECRET_KEY == _DEFAULT_SECRET:
+    _log.warning(
+        "⚠️  SECURITY WARNING: Using default SECRET_KEY. "
+        "Set the SECRET_KEY environment variable for production!"
+    )
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60   # Increased from 30
 
 # Using pbkdf2_sha256 for better compatibility on Windows/different environments
-# bcrypt was causing ValueError regarding password length/type in some setups.
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+
+# ── Password policy ──────────────────────────────────────────────────────────
+def validate_password(password: str) -> list[str]:
+    """Validate password strength. Returns list of errors (empty = valid)."""
+    errors = []
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters.")
+    if not re.search(r"[A-Z]", password):
+        errors.append("Password must contain at least 1 uppercase letter.")
+    if not re.search(r"[0-9]", password):
+        errors.append("Password must contain at least 1 digit.")
+    return errors
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

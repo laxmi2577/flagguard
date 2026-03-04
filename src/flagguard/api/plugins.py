@@ -3,7 +3,6 @@
 Register custom parsers and conflict rules as plugins.
 """
 
-import importlib
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -45,7 +44,7 @@ class PluginCreate(BaseModel):
     id: str
     name: str
     type: str  # parser or rule
-    module_path: str = ""  # e.g., "my_plugins.custom_parser"
+    description: str = ""
     config: dict = {}
 
 class PluginToggle(BaseModel):
