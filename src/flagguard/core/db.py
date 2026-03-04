@@ -31,10 +31,29 @@ Base = declarative_base()
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Get database session.
+    """Get database session (FastAPI dependency).
     
     Yields:
         Database session
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+from contextlib import contextmanager
+
+@contextmanager
+def get_db_session():
+    """Context manager for safe DB session usage in UI handlers.
+    
+    Usage:
+        with get_db_session() as db:
+            db.query(...)
+    
+    Automatically closes the session even if an exception occurs.
     """
     db = SessionLocal()
     try:

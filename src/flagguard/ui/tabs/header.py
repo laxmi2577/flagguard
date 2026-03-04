@@ -10,7 +10,6 @@ Provides:
 
 import gradio as gr
 
-
 # JS injected once to manage dark/light mode via body class
 DARK_LIGHT_JS = """
 <script>
@@ -31,7 +30,6 @@ DARK_LIGHT_JS = """
 })();
 </script>
 """
-
 
 def build_header_html(role: str, notif_count: int = 0, notifications: list = None) -> str:
     """Build the full header HTML with brand, notifications, theme toggle and role badge."""
@@ -132,7 +130,6 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
     {DARK_LIGHT_JS}
     """
 
-
 def create_shared_header(role: str, user_state: gr.State) -> tuple:
     """Create shared header row with brand, notifications, theme toggle, role badge, sign-out.
     
@@ -155,7 +152,7 @@ def create_shared_header(role: str, user_state: gr.State) -> tuple:
             ).order_by(Notification.created_at.desc()).limit(10).all()
             count = len(notifs)
             notif_list = [{"title": n.title, "message": n.message, "type": n.type} for n in notifs]
-            db.close()
+
             return build_header_html(role, count, notif_list)
         except Exception:
             return build_header_html(role, 0)

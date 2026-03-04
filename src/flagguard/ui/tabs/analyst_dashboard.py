@@ -4,7 +4,6 @@ import gradio as gr
 from flagguard.ui.helpers import run_analysis
 from flagguard.ui.tabs.header import create_shared_header
 
-
 def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
     with gr.Group(visible=False) as dashboard:
 
@@ -77,7 +76,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         # Reload analyst's own projects
                         projs = db.query(Project).filter(Project.owner_id == uid)\
                                   .order_by(Project.created_at.desc()).all()
-                        db.close()
+
                         return gr.update(choices=[(p.name, p.id) for p in projs], value=p.id), f"Created: {name}"
                     except Exception as e:
                         return gr.update(), f"Error: {e}"
@@ -124,14 +123,14 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            db.close(); return {"error": "Project not found"}
+                            return {"error": "Project not found"}
                         existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
                         if existing:
-                            db.close(); return {"error": f"Environment '{name}' already exists"}
+                            return {"error": f"Environment '{name}' already exists"}
                         env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
                         db.add(env); db.commit(); db.refresh(env)
                         result = {"id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
-                        db.close()
+
                         return result
                     except Exception as e:
                         return {"error": str(e)}
@@ -145,7 +144,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         ea = db.query(Environment).filter(Environment.id == env_a_id.strip()).first()
                         eb = db.query(Environment).filter(Environment.id == env_b_id.strip()).first()
-                        db.close()
+
                         if not ea or not eb:
                             return {"error": "One or both environments not found"}
                         oa, ob = ea.flag_overrides or {}, eb.flag_overrides or {}
@@ -183,11 +182,11 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            db.close(); return {"error": "Project not found"}
+                            return {"error": "Project not found"}
                         wh = WebhookConfig(project_id=pid.strip(), url=url, events=events or ["scan.completed"])
                         db.add(wh); db.commit(); db.refresh(wh)
                         result = {"id": wh.id, "url": wh.url, "events": wh.events, "project_id": wh.project_id}
-                        db.close()
+
                         return result
                     except Exception as e:
                         return {"error": str(e)}
@@ -200,7 +199,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import WebhookConfig
                         db = SessionLocal()
                         wh = db.query(WebhookConfig).filter(WebhookConfig.id == wid.strip()).first()
-                        db.close()
+
                         if not wh:
                             return {"error": "Webhook not found"}
                         # Attempt to send test payload
@@ -242,7 +241,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Project
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
-                        db.close()
+
                         if not proj:
                             return {"error": "Project not found"}
                         return {"status": "scheduled", "project": proj.name, "project_id": pid,
@@ -261,7 +260,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         cutoff = dt.utcnow() - timedelta(days=int(days))
                         scans = db.query(Scan).filter(Scan.project_id == pid.strip(), Scan.created_at >= cutoff).order_by(Scan.created_at.asc()).all()
-                        db.close()
+
                         if not scans:
                             return {"message": f"No scans in the last {int(days)} days"}
                         return {"project_id": pid, "days": int(days), "total_scans": len(scans),
@@ -294,7 +293,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Scan
                         db = SessionLocal()
                         scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).limit(5).all()
-                        db.close()
+
                         if not scans:
                             return {"error": "No scans found"}
                         return {"project_id": pid, "format": fmt, "total_scans": len(scans),
@@ -312,9 +311,9 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            db.close(); return {"error": "Project not found"}
+                            return {"error": "Project not found"}
                         scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).all()
-                        db.close()
+
                         total = len(scans)
                         avg_health = sum((s.result_summary or {}).get("health_score", 0) for s in scans) / max(total, 1)
                         latest = scans[0] if scans else None
@@ -388,7 +387,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Scan
                         db = SessionLocal()
                         last_scan = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).first()
-                        db.close()
+
                         if not last_scan or not last_scan.result_summary:
                             return "-", "-", "-", "No scans found. Run an analysis first."
                         summary = last_scan.result_summary or {}
@@ -435,7 +434,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Scan
                         db = SessionLocal()
                         scans = db.query(Scan).filter(Scan.project_id==pid).order_by(Scan.created_at.desc()).limit(10).all()
-                        db.close()
+
                         return [{"id":s.id,"date":str(s.created_at)[:16],"health":(s.result_summary or {}).get("health_score","N/A")} for s in scans]
                     except Exception as e:
                         return [{"error":str(e)}]
@@ -447,7 +446,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         sa = db.query(Scan).filter(Scan.id==sa_id).first()
                         sb = db.query(Scan).filter(Scan.id==sb_id).first()
-                        db.close()
+
                         if not sa or not sb: return {"error": "Scan not found"}
                         sma, smb = sa.result_summary or {}, sb.result_summary or {}
                         hdiff = smb.get("health_score",0) - sma.get("health_score",0)
@@ -477,7 +476,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         u = db.query(User).filter(User.id==uid).first()
-                        db.close()
+
                         return {"email":u.email,"name":u.full_name,"role":u.role} if u else {}
                     except Exception as e:
                         return {"error":str(e)}
@@ -492,9 +491,9 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         u = db.query(User).filter(User.id==uid).first()
                         if not u or not verify_password(curr, u.hashed_password):
-                            db.close(); return "Current password wrong."
+                            return "Current password wrong."
                         u.hashed_password = get_password_hash(new)
-                        db.commit(); db.close()
+                        db.commit()
                         return "Password changed!"
                     except Exception as e:
                         return f"Error: {e}"
@@ -511,7 +510,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 db = SessionLocal()
                 projs = db.query(Project).filter(Project.owner_id == uid)\
                           .order_by(Project.created_at.desc()).all()
-                db.close()
+
                 return gr.update(choices=[(p.name, p.id) for p in projs],
                                  value=projs[0].id if projs else None)
             except Exception:

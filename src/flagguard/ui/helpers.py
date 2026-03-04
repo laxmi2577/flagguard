@@ -20,7 +20,6 @@ import gradio as gr
 
 HISTORY_FILE = Path.home() / ".flagguard" / "scan_history.json"
 
-
 def create_charts(flags: list, conflicts: list):
     """Generate Gold/Emerald/Silver palette charts."""
     if not PLOTLY_AVAILABLE:
@@ -80,7 +79,6 @@ def create_charts(flags: list, conflicts: list):
         title=dict(text="Conflict Severity", font=dict(size=14, color='#d4af37'), x=0.5, xanchor='center')
     )
     return fig1, fig2
-
 
 def generate_mermaid_html(flags: list, conflicts: list) -> tuple[str, str]:
     """
@@ -220,7 +218,6 @@ body {{
     iframe = f'<iframe src="data:text/html;base64,{encoded}" style="width:100%; height:620px; border:none; border-radius:12px;"></iframe>'
     return iframe, mermaid_code
 
-
 def load_history() -> list[dict]:
     try:
         if HISTORY_FILE.exists():
@@ -229,7 +226,6 @@ def load_history() -> list[dict]:
     except Exception:
         pass
     return []
-
 
 def save_history_entry(entry: dict):
     try:
@@ -240,7 +236,6 @@ def save_history_entry(entry: dict):
             json.dump(history[:50], f)
     except Exception:
         pass
-
 
 def run_analysis(config_file, source_file, use_llm, progress=gr.Progress()):
     """Core analysis logic — shared by all role dashboards."""
@@ -309,7 +304,6 @@ def run_analysis(config_file, source_file, use_llm, progress=gr.Progress()):
     except Exception as e:
         raise gr.Error(f"Analysis Error: {str(e)}")
 
-
 def format_conflicts_list(conflicts) -> str:
     if not conflicts:
         return "No conflicts detected."
@@ -318,7 +312,6 @@ def format_conflicts_list(conflicts) -> str:
         flags_str = " vs ".join(c.flags_involved[:2])
         lines.append(f"[{c.conflict_type.value.upper()}] {flags_str}")
     return "\n".join(lines)
-
 
 def get_user_notifications(user_id: str) -> tuple[int, list]:
     """Fetch unread notification count and list for a user."""
@@ -333,7 +326,7 @@ def get_user_notifications(user_id: str) -> tuple[int, list]:
         result = [{"id": n.id, "title": n.title, "message": n.message, "type": n.type}
                   for n in notifs]
         count = len(result)
-        db.close()
+
         return count, result
     except Exception:
         return 0, []

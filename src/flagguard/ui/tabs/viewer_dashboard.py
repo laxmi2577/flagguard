@@ -8,7 +8,6 @@ import gradio as gr
 from flagguard.ui.helpers import run_analysis
 from flagguard.ui.tabs.header import create_shared_header
 
-
 def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
     """Build the Viewer dashboard. Returns the dashboard Group component."""
 
@@ -69,7 +68,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             scans = db.query(Scan).filter(
                                 Scan.project_id == proj_id
                             ).order_by(Scan.created_at.desc()).limit(20).all()
-                            db.close()
+
                             return [{"id": s.id, "status": s.status,
                                      "triggered_by": s.triggered_by,
                                      "health": (s.result_summary or {}).get("health_score", "N/A"),
@@ -139,7 +138,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             from flagguard.core.models.tables import Scan
                             db = SessionLocal()
                             last_scan = db.query(Scan).filter(Scan.project_id == proj_id.strip()).order_by(Scan.created_at.desc()).first()
-                            db.close()
+
                             if not last_scan or not last_scan.result_summary:
                                 return "-", "-", "-", "-", "No scans found for this project."
                             summary = last_scan.result_summary or {}
@@ -186,7 +185,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             db = SessionLocal()
                             # Search in latest scan results for flag names
                             results_all = db.query(ScanResult).order_by(ScanResult.created_at.desc()).limit(5).all()
-                            db.close()
+
                             found = []
                             for sr in results_all:
                                 raw = sr.raw_json or {}
@@ -241,7 +240,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             from flagguard.core.models.tables import User
                             db = SessionLocal()
                             user = db.query(User).filter(User.id == uid).first()
-                            db.close()
+
                             if not user:
                                 return {}
                             return {"email": user.email, "name": user.full_name,
@@ -262,11 +261,11 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             db = SessionLocal()
                             user = db.query(User).filter(User.id == uid).first()
                             if not user or not verify_password(curr, user.hashed_password):
-                                db.close()
+
                                 return "Current password is incorrect."
                             user.hashed_password = get_password_hash(new)
                             db.commit()
-                            db.close()
+
                             return "Password changed successfully."
                         except Exception as e:
                             return f"Error: {e}"
@@ -284,7 +283,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                 db = SessionLocal()
                 projs = db.query(Project).filter(Project.owner_id == uid)\
                           .order_by(Project.created_at.desc()).all()
-                db.close()
+
                 return gr.update(choices=[(p.name, p.id) for p in projs],
                                  value=projs[0].id if projs else None)
             except Exception:

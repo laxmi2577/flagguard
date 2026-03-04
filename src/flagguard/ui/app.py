@@ -10,7 +10,6 @@ from flagguard.ui.tabs.viewer_dashboard  import create_viewer_dashboard
 from flagguard.ui.tabs.analyst_dashboard import create_analyst_dashboard
 from flagguard.ui.tabs.admin_dashboard   import create_admin_dashboard
 
-
 def create_app():
     theme = get_theme()
 
@@ -122,7 +121,6 @@ def create_app():
             try:
                 db = SessionLocal()
                 user = db.query(User).filter(User.email == email).first()
-                db.close()
 
                 if not user or not verify_password(password, user.hashed_password):
                     # Check if pending
@@ -186,18 +184,18 @@ def create_app():
                 from flagguard.auth.utils import get_password_hash
                 db = SessionLocal()
                 if db.query(User).filter(User.email == email).first():
-                    db.close()
+
                     return "<div style='color:#ef4444;'>Email already has an active account.</div>"
                 existing = db.query(PendingUser).filter(PendingUser.email == email).first()
                 if existing and existing.status == "pending":
-                    db.close()
+
                     return "<div style='color:#f59e0b;'>⏳ A pending request already exists for this email.</div>"
                 pending = PendingUser(
                     full_name=name, email=email,
                     hashed_password=get_password_hash(pw),
                     requested_role=role, reason=reason or ""
                 )
-                db.add(pending); db.commit(); db.close()
+                db.add(pending); db.commit()
                 return """<div style='background:rgba(48,209,88,0.1);border:1px solid rgba(48,209,88,0.3);
                                      border-radius:8px;padding:12px;text-align:center;color:#30d158;'>
                     ✅ Request submitted!<br>
@@ -221,7 +219,7 @@ def create_app():
                 from flagguard.core.models.tables import PendingUser
                 db = SessionLocal()
                 p = db.query(PendingUser).filter(PendingUser.email == email).first()
-                db.close()
+
                 if not p:
                     return "<div style='color:#94a3b8;'>No request found for this email.</div>"
                 colors = {"pending": "#f59e0b", "approved": "#30d158", "rejected": "#ef4444"}
@@ -248,7 +246,6 @@ def create_app():
 
     return app
 
-
 def launch():
     import threading
     import time
@@ -269,7 +266,6 @@ def launch():
     app = create_app()
     print("✅ Gradio UI starting on http://localhost:7860 ...")
     app.launch(show_error=True, allowed_paths=["."])
-
 
 if __name__ == "__main__":
     launch()

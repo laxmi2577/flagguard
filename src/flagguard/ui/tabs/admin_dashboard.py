@@ -9,7 +9,6 @@ import gradio as gr
 from flagguard.ui.helpers import run_analysis
 from flagguard.ui.tabs.header import create_shared_header
 
-
 def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
     with gr.Group(visible=False) as dashboard:
 
@@ -68,7 +67,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         pending = db.query(PendingUser).filter(PendingUser.status == "pending")\
                                      .order_by(PendingUser.requested_at.desc()).all()
-                        db.close()
+
                         return [{"id": p.id, "name": p.full_name, "email": p.email,
                                  "role": p.requested_role, "reason": p.reason,
                                  "requested": str(p.requested_at)[:16]} for p in pending]
@@ -86,9 +85,9 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         p = db.query(PendingUser).filter(PendingUser.id == pending_id.strip()).first()
                         if not p:
-                            db.close(); return "Request not found."
+                            return "Request not found."
                         if p.status != "pending":
-                            db.close(); return f"Already {p.status}."
+                            return f"Already {p.status}."
                         new_user = User(email=p.email, hashed_password=p.hashed_password,
                                         full_name=p.full_name, role=p.requested_role, is_active=True)
                         db.add(new_user)
@@ -97,7 +96,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         notif = Notification(user_id=new_user.id, title="Access Approved",
                             message=f"Your {p.requested_role} access has been approved! You can now sign in.",
                             type="success")
-                        db.add(notif); db.commit(); db.close()
+                        db.add(notif); db.commit()
                         return f"✅ Approved! {p.email} can now login as {p.requested_role}."
                     except Exception as e:
                         return f"Error: {e}"
@@ -112,12 +111,12 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         p = db.query(PendingUser).filter(PendingUser.id == pending_id.strip()).first()
                         if not p:
-                            db.close(); return "Request not found."
+                            return "Request not found."
                         if p.status != "pending":
-                            db.close(); return f"Already {p.status}."
+                            return f"Already {p.status}."
                         p.status = "rejected"; p.reviewed_at = dt.utcnow()
                         p.reviewed_by = uid; p.reason = reason or "Request denied by admin."
-                        db.commit(); db.close()
+                        db.commit()
                         return f"❌ Rejected request for {p.email}."
                     except Exception as e:
                         return f"Error: {e}"
@@ -159,7 +158,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         users = db.query(User).order_by(User.created_at.desc()).all()
-                        db.close()
+
                         return [{"id": u.id, "email": u.email, "name": u.full_name,
                                  "role": u.role, "active": u.is_active,
                                  "joined": str(u.created_at)[:10]} for u in users]
@@ -172,8 +171,8 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         u = db.query(User).filter(User.id == target_uid.strip()).first()
-                        if not u: db.close(); return "User not found."
-                        u.role = new_role; db.commit(); db.close()
+                        if not u: return "User not found."
+                        u.role = new_role; db.commit()
                         return f"Role updated to {new_role}."
                     except Exception as e:
                         return f"Error: {e}"
@@ -186,9 +185,9 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.auth.utils import get_password_hash
                         db = SessionLocal()
                         u = db.query(User).filter(User.id == target_uid.strip()).first()
-                        if not u: db.close(); return "User not found."
+                        if not u: return "User not found."
                         u.hashed_password = get_password_hash(new_pw)
-                        db.commit(); db.close()
+                        db.commit()
                         return "Password reset successfully."
                     except Exception as e:
                         return f"Error: {e}"
@@ -201,8 +200,8 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         u = db.query(User).filter(User.id == target_uid.strip()).first()
-                        if not u: db.close(); return "User not found."
-                        u.is_active = False; db.commit(); db.close()
+                        if not u: return "User not found."
+                        u.is_active = False; db.commit()
                         return f"Account {u.email} deactivated."
                     except Exception as e:
                         return f"Error: {e}"
@@ -243,7 +242,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             AuditLog.created_at >= dt.combine(date.today(), dt.min.time())
                         ).count()
                         logs = q.order_by(AuditLog.created_at.desc()).limit(50).all()
-                        db.close()
+
                         h_total = f"<div class='metric-value'>{total}</div><div class='metric-label'>Total Events</div>"
                         h_today = f"<div class='metric-value'>{today_count}</div><div class='metric-label'>Today</div>"
                         rows = [{"action": l.action, "resource": l.resource_type,
@@ -285,7 +284,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             .order_by(func.count(AuditLog.id).desc())
                             .limit(5).all()
                         )
-                        db.close()
+
                         return {
                             "top_actions": [{"action": a, "count": c} for a, c in action_counts],
                             "top_users":   [{"user_id": u, "count": c} for u, c in user_counts]
@@ -331,7 +330,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         users_count = db.query(User).count()
                         projs_count = db.query(Project).count()
                         scans_count = db.query(Scan).count()
-                        db.close()
+
                         overview = {"total_users": users_count, "total_projects": projs_count,
                                     "total_scans": scans_count, "status": "operational"}
                         h_u = f"<div class='metric-value'>{users_count}</div><div class='metric-label'>Users</div>"
@@ -352,7 +351,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             Project, Project.owner_id == User.id
                         ).join(Scan, Scan.project_id == Project.id).group_by(User.email).order_by(
                             func.count(Scan.id).desc()).limit(10).all()
-                        db.close()
+
                         return [{"user": r[0], "total_scans": r[1]} for r in rows] or [{"message": "No data yet"}]
                     except Exception as e:
                         return {"error": str(e)}
@@ -368,7 +367,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             last_scan = db.query(Scan).filter(Scan.project_id == p.id).order_by(Scan.created_at.desc()).first()
                             health = (last_scan.result_summary or {}).get("health_score", "N/A") if last_scan else "No scans"
                             result.append({"project": p.name, "health": health, "last_scan": str(last_scan.created_at)[:16] if last_scan else "Never"})
-                        db.close()
+
                         return result or [{"message": "No projects yet"}]
                     except Exception as e:
                         return {"error": str(e)}
@@ -409,11 +408,11 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         try:
                             from sqlalchemy import text
                             rows = db.execute(text("SELECT * FROM plugins ORDER BY created_at DESC")).fetchall()
-                            db.close()
+
                             return [{"id": r[0], "name": r[1], "type": r[2], "version": r[3],
                                      "enabled": r[5], "description": r[4]} for r in rows] or [{"message": "No plugins registered"}]
                         except Exception:
-                            db.close()
+
                             return [{"message": "Plugin system ready — no plugins registered yet. Register one below."}]
                     except Exception as e:
                         return {"error": str(e)}
@@ -431,7 +430,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             "INSERT INTO plugins (id, name, type, version, description, enabled, created_at) "
                             "VALUES (:id, :name, :type, :ver, :desc, 1, datetime('now'))"
                         ), {"id": pid, "name": name, "type": ptype, "ver": version, "desc": desc})
-                        db.commit(); db.close()
+                        db.commit()
                         return f"✅ Registered: {name} (ID: {pid[:8]}...)"
                     except Exception as e:
                         return f"Error: {e}"
@@ -444,7 +443,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from sqlalchemy import text
                         db = SessionLocal()
                         db.execute(text("UPDATE plugins SET enabled = :e WHERE id = :id"), {"e": 1 if enabled else 0, "id": pid.strip()})
-                        db.commit(); db.close()
+                        db.commit()
                         return f"Plugin {'enabled' if enabled else 'disabled'}."
                     except Exception as e:
                         return f"Error: {e}"
@@ -457,7 +456,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from sqlalchemy import text
                         db = SessionLocal()
                         db.execute(text("DELETE FROM plugins WHERE id = :id"), {"id": pid.strip()})
-                        db.commit(); db.close()
+                        db.commit()
                         return "Plugin removed."
                     except Exception as e:
                         return f"Error: {e}"
@@ -498,7 +497,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Scan
                         db = SessionLocal()
                         last_scan = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).first()
-                        db.close()
+
                         if not last_scan or not last_scan.result_summary:
                             return "-", "-", {"error": "No scans found for this project. Run an analysis first."}
                         health = last_scan.result_summary.get("health_score", 0)
@@ -557,7 +556,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db.add(p); db.commit(); db.refresh(p)
                         # Reload ALL projects for admin
                         projs = db.query(Project).order_by(Project.created_at.desc()).all()
-                        db.close()
+
                         choices = [(f"{pr.name} (owner: {pr.owner_id[:8]}...)", pr.id) for pr in projs]
                         return gr.update(choices=choices, value=p.id), f"Created project: {name}"
                     except Exception as e:
@@ -603,14 +602,14 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            db.close(); return {"error": "Project not found"}
+                            return {"error": "Project not found"}
                         existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
                         if existing:
-                            db.close(); return {"error": f"Environment '{name}' already exists"}
+                            return {"error": f"Environment '{name}' already exists"}
                         env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
                         db.add(env); db.commit(); db.refresh(env)
                         result = {"id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
-                        db.close()
+
                         return result
                     except Exception as e:
                         return {"error": str(e)}
@@ -624,7 +623,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         ea = db.query(Environment).filter(Environment.id == env_a_id.strip()).first()
                         eb = db.query(Environment).filter(Environment.id == env_b_id.strip()).first()
-                        db.close()
+
                         if not ea or not eb:
                             return {"error": "One or both environments not found"}
                         oa, ob = ea.flag_overrides or {}, eb.flag_overrides or {}
@@ -659,7 +658,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import Scan
                         db = SessionLocal()
                         scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).limit(5).all()
-                        db.close()
+
                         if not scans:
                             return {"error": "No scans found"}
                         return {"project_id": pid, "format": fmt, "total_scans": len(scans),
@@ -677,9 +676,9 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            db.close(); return {"error": "Project not found"}
+                            return {"error": "Project not found"}
                         scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).all()
-                        db.close()
+
                         total = len(scans)
                         avg_health = sum((s.result_summary or {}).get("health_score", 0) for s in scans) / max(total, 1)
                         latest = scans[0] if scans else None
@@ -744,7 +743,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         u = db.query(User).filter(User.id==uid).first()
-                        db.close()
+
                         return {"email":u.email,"name":u.full_name,"role":u.role,"joined":str(u.created_at)[:10]} if u else {}
                     except Exception as e:
                         return {"error":str(e)}
@@ -759,9 +758,9 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         db = SessionLocal()
                         u = db.query(User).filter(User.id==uid).first()
                         if not u or not verify_password(curr, u.hashed_password):
-                            db.close(); return "Current password wrong."
+                            return "Current password wrong."
                         u.hashed_password = get_password_hash(new)
-                        db.commit(); db.close()
+                        db.commit()
                         return "Password changed!"
                     except Exception as e:
                         return f"Error: {e}"
@@ -780,7 +779,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                 projs = db.query(Project).order_by(Project.created_at.desc()).all()
                 # Show project name + owner email for admin context
                 user_map = {u.id: u.email for u in db.query(User).all()}
-                db.close()
+
                 choices = [(f"{p.name}  [{user_map.get(p.owner_id, p.owner_id[:8])}]", p.id) for p in projs]
                 return gr.update(choices=choices, value=projs[0].id if projs else None)
             except Exception as e:
