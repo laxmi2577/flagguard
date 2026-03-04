@@ -51,4 +51,8 @@ Thumbs.db
 
 # FlagGuard specific
 .flagguard_cache/
+.flagguard/
+flagguard.db
 flagguard-report.*
+debug_*.py
+migrate_db.py
