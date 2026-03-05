@@ -51,6 +51,50 @@ FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" 
 
 ---
 
+## 🏗️ System Design & Architecture
+
+FlagGuard is designed as a modular, offline-first static analysis engine. Below is the high-level system architecture demonstrating how the components interact mathematically prove feature flag safety.
+
+```mermaid
+flowchart LR
+    subgraph Inputs
+        A[Flag Config<br/>JSON/YAML] 
+        B[Source Code<br/>Python/JS]
+    end
+    
+    subgraph Processing Engine
+        C[Config Parser]
+        D[AST Parser<br/>tree-sitter]
+        E[Path Analyzer]
+        F[SAT Solver<br/>Z3]
+        G[Conflict Detector]
+        H[Dead Code Finder]
+    end
+    
+    subgraph Output Interfaces
+        I[LLM Explainer<br/>Gemma 2B]
+        J[Report Generator]
+        K[CLI Output]
+        L[Web UI (Gradio)]
+        M[REST API (FastAPI)]
+    end
+    
+    A --> C --> F
+    B --> D --> E --> F
+    F --> G --> I --> J
+    F --> H --> I
+    J --> K
+    J --> L
+    J --> M
+```
+
+### Core Architecture Components
+1. **Multi-Language AST Scanner:** Uses `tree-sitter` to scan Python and JavaScript/TypeScript source code to detect complex branching patterns like `if is_enabled("flag_name"):`.
+2. **Boolean Satisfiability (SAT) Solver:** Encodes codebase execution paths and feature flag dependencies as pure boolean logic constraints using Microsoft's **Z3 SMT solver**.
+3. **Persisted State & RBAC:** Stores analytical results, RBAC user permissions (`admin`, `analyst`, `viewer`), and multi-environment drifts (dev/staging/prod) in an isolated SQLAlchemy database.
+
+---
+
 ## 📚 Comprehensive Documentation Directory
 
 We maintain rigorous documentation standards. Explore the architecture and usage guides below:
