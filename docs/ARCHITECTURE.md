@@ -9,25 +9,25 @@ FlagGuard is designed as a modular, offline-first static analysis tool combining
 ```mermaid
 flowchart LR
     subgraph Inputs
-        A[Flag Config<br/>JSON/YAML] 
-        B[Source Code<br/>Python/JS]
+        A["Flag Config<br/>JSON/YAML"] 
+        B["Source Code<br/>Python/JS"]
     end
     
     subgraph Processing Engine
-        C[Config Parser]
-        D[AST Parser<br/>tree-sitter]
-        E[Path Analyzer]
-        F[SAT Solver<br/>Z3]
-        G[Conflict Detector]
-        H[Dead Code Finder]
+        C["Config Parser"]
+        D["AST Parser<br/>tree-sitter"]
+        E["Path Analyzer"]
+        F["SAT Solver<br/>Z3"]
+        G["Conflict Detector"]
+        H["Dead Code Finder"]
     end
     
     subgraph Output Interfaces
-        I[LLM Explainer<br/>Gemma 2B]
-        J[Report Generator]
-        K[CLI Output]
-        L[Web UI (Gradio)]
-        M[REST API (FastAPI)]
+        I["LLM Explainer<br/>Gemma 2B"]
+        J["Report Generator"]
+        K["CLI Output"]
+        L["Web UI (Gradio)"]
+        M["REST API (FastAPI)"]
     end
     
     A --> C --> F
