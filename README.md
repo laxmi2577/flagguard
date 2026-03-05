@@ -104,7 +104,7 @@ If you are a platform engineer with a feature request, please open a [GitHub Iss
 ## 👨‍💻 About the Author
 
 **Laxmiranjan Sahu**  
-*Senior Software Engineer & Architect*
+*AI\ML Engineer *
 
 FlagGuard was architected and developed from the ground up to address critical gaps in continuous delivery safety. I specialize in building highly resilient automation architectures, distributed systems, and QA infrastructure for enterprise applications.
 
