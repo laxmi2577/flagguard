@@ -15,7 +15,7 @@
 
 ---
 
-![FlagGuard Architecture](https://raw.githubusercontent.com/laxmi2577/flagguard/master/docs/assets/banner.png) *(Illustration placeholder)*
+
 
 </div>
 
