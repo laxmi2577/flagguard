@@ -235,3 +235,65 @@ Answer the user's question based ONLY on the provided context.
 
 **Response:**
 """
+
+
+# =============================================================================
+# GraphRAG Conflict Remediation Prompt (Phase 1 — Step 1.5)
+# =============================================================================
+
+RAG_CONFLICT_REMEDIATION_PROMPT = """You are FlagGuard-Coder, an AI engineer that fixes feature flag conflicts using source code context.
+
+**Conflict Detected by Z3 SAT Solver:**
+{conflict_description}
+
+**Flags Involved:** {flags}
+
+**Source Code Context (Retrieved via GraphRAG):**
+{rag_context}
+
+**Your Task:**
+1. Explain what this conflict means for the codebase in 2-3 sentences.
+2. Identify which specific functions/files need to change.
+3. Generate a concrete fix in unified diff format.
+
+**Rules:**
+- Base your fix ONLY on the provided source code context.
+- Do NOT hallucinate code that doesn't exist in the context.
+- If the fix is a config change (flag dependency/exclusion), show the JSON/YAML diff.
+- If the fix is a code change, show the Python/JS diff.
+
+**Response Format:**
+## Impact Analysis
+[What this conflict means and which functions are affected]
+
+## Suggested Fix
+```diff
+[Unified diff showing exact changes needed]
+```
+
+## Verification Notes
+[What should be tested after applying this fix]
+"""
+
+
+def format_rag_remediation_prompt(
+    conflict_description: str,
+    flags: list[str],
+    rag_context: str,
+) -> str:
+    """Format the RAG conflict remediation prompt.
+
+    Args:
+        conflict_description: Z3 conflict description
+        flags: List of conflicting flag names
+        rag_context: Formatted context from the Hybrid Retriever
+
+    Returns:
+        Formatted prompt string ready for the LLM
+    """
+    return RAG_CONFLICT_REMEDIATION_PROMPT.format(
+        conflict_description=conflict_description,
+        flags=", ".join(flags),
+        rag_context=rag_context,
+    )
+

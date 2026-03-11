@@ -66,6 +66,42 @@ class ExplanationEngine:
         
         return explanation.strip()
     
+    def explain_conflict_with_fix(
+        self,
+        conflict: Conflict,
+        rag_context: str,
+    ) -> str:
+        """Generate a RAG-augmented explanation with a concrete code fix.
+        
+        Uses the Hybrid Retriever's context (semantic + graph results)
+        to ground the LLM's response in actual source code, preventing
+        hallucination and enabling actionable remediation patches.
+        
+        Args:
+            conflict: The conflict to explain.
+            rag_context: Formatted source code context from HybridRetriever.
+            
+        Returns:
+            Human-readable explanation with suggested code fix.
+        """
+        if not self.use_llm:
+            return self._template_conflict_explanation(conflict)
+        
+        from flagguard.llm.prompts import format_rag_remediation_prompt
+        
+        prompt = format_rag_remediation_prompt(
+            conflict_description=conflict.reason,
+            flags=conflict.flags_involved,
+            rag_context=rag_context,
+        )
+        
+        explanation = self.client.generate(prompt)
+        
+        if not explanation or "[LLM unavailable]" in explanation:
+            return self._template_conflict_explanation(conflict)
+        
+        return explanation.strip()
+    
     def explain_dead_code(self, block: DeadCodeBlock) -> str:
         """Generate an explanation for dead code.
         
