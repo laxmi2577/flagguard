@@ -1,9 +1,47 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to FlagGuard will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.0.0] - 2026-03-11
+
+### Added — AI Intelligence Layer (GraphRAG + Agentic Remediation)
+
+- **AST-Aware Code Chunking** (`rag/ingester.py`)
+  - Replaced naive 50-line sliding window with tree-sitter AST function-level extraction
+  - Each chunk stores `function_name`, `class_name`, `start_line`, `end_line`, `flags_referenced`
+  - Supports Python and JavaScript/TypeScript with regex fallback
+
+- **Knowledge Graph** (`ai/graph.py`)
+  - NetworkX-based directed call graph (which functions call which)
+  - Transitive impact analysis via reverse BFS: given a flag conflict, find ALL affected functions
+  - graph stats API for debugging and UI display
+
+- **Hybrid Retriever** (`rag/retriever.py`)
+  - Combines ChromaDB semantic search + NetworkX graph traversal
+  - Intelligent merge, deduplication, and relevance-boosted ranking
+  - Items found by both strategies ranked highest
+  - Backwards-compatible `CheckRetriever` alias preserved
+
+- **Agentic Remediation Loop** (`ai/agent.py`)
+  - `CoderAgent`: Generates `git diff` patches using RAG-retrieved source context
+  - `VerifierAgent`: Feeds patches through Z3 SAT solver for formal verification
+  - `RemediationAgent`: Orchestrates Coder → Verifier → Retry (max 3 attempts)
+  - Full reasoning chain tracking for UI display
+
+- **RAG-Augmented Explainer** (`llm/explainer.py`, `llm/prompts.py`)
+  - New `explain_conflict_with_fix()` method injects GraphRAG context into LLM prompts
+  - New `RAG_CONFLICT_REMEDIATION_PROMPT` template for code-fix generation
+
+- **AI Remediation Web UI Tab** (`ui/tabs/remediation.py`)
+  - 🤖 AI Remediation tab with 3 sub-panels: Suggested Fix, Agent Reasoning, RAG Context
+  - Interactive conflict selector and one-click fix generation
+
+- **Test Suites**
+  - `test_ast_chunker.py`: 10 tests covering AST chunking, flag extraction, metadata
+  - `test_knowledge_graph.py`: 11 tests covering call graph, transitive callers, impact analysis
 
 ## [2.0.0] - 2026-03-03
 
@@ -128,6 +166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[3.0.0]: https://github.com/laxmi2577/flagguard/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/laxmi2577/flagguard/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/laxmi2577/flagguard/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/laxmi2577/flagguard/releases/tag/v0.1.0

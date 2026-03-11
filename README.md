@@ -1,7 +1,13 @@
-﻿<div align="center">
+<div align="center">
 
 # 🛡️ FlagGuard
 **Enterprise-Grade AI Feature Flag Intelligence Platform**
+
+<p align="center">
+  <a href="#-ai-native-intelligence-layer-graphrag"><img src="https://img.shields.io/badge/🧠_GraphRAG-Agentic_AI-blueviolet?style=for-the-badge" alt="GraphRAG"/></a>
+  <a href="#-system-design--architecture"><img src="https://img.shields.io/badge/🔬_Z3_SAT-Formal_Verification-blue?style=for-the-badge" alt="Z3"/></a>
+  <a href="#-the-challenge-technical-debt-at-scale"><img src="https://img.shields.io/badge/🛡️_Zero-False_Positives-success?style=for-the-badge" alt="Zero FP"/></a>
+</p>
 
 <p align="center">
   <em>Mathematically proving feature flag safety before you deploy. Used to detect conflicts, dead code, and impossible states.</em>
@@ -43,8 +49,8 @@ FlagGuard parses your codebase, translates your feature flag rules into Boolean 
 ### 2. 🗑️ Automated Dead Code Elimination
 By applying constraint solving against your codebase AST (via `tree-sitter`), FlagGuard flags code blocks that are mathematically unreachable based on your current LaunchDarkly, Unleash, or custom JSON/YAML flag configurations.
 
-### 3. 🤖 Local AI Explanations via LLMs
-Constraint solvers output complex algebraic failures. FlagGuard integrates with local **Ollama** instances (running models like Gemma 2b) to translate complex Boolean conflicts into plain-English, executive-friendly summaries directly in your PR comments.
+### 3. 🤖 Agentic AI Remediation (GraphRAG)
+FlagGuard doesn't just *explain* conflicts — it **fixes them**. A multi-agent system retrieves relevant source code via a **Hybrid Retriever** (ChromaDB semantic search + NetworkX call graph), generates a code patch via a **Coder Agent**, and mathematically verifies it through a **Z3 Verifier Agent** — all in an autonomous retry loop. See the [AI Intelligence Layer](#-ai-native-intelligence-layer-graphrag) below for the full architecture.
 
 ### 4. 📊 Enterprise Dashboard & RBAC REST API
 FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" web UI built on Gradio, backed by a production-ready **FastAPI** backend featuring JWT Authentication, Role-Based Access Control, and SQLite/PostgreSQL persistence.
@@ -53,7 +59,7 @@ FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" 
 
 ## 🏗️ System Design & Architecture
 
-FlagGuard is designed as a modular, offline-first static analysis engine. Below is the high-level system architecture demonstrating how the components interact mathematically prove feature flag safety.
+FlagGuard is a modular, offline-first analysis engine with an **AI-native intelligence layer**. The architecture combines formal verification (Z3), knowledge graphs (NetworkX), vector databases (ChromaDB), and multi-agent LLM orchestration into a single pipeline.
 
 ```mermaid
 flowchart LR
@@ -62,7 +68,7 @@ flowchart LR
         B["Source Code<br/>Python/JS"]
     end
     
-    subgraph Processing Engine
+    subgraph Analysis Engine
         C["Config Parser"]
         D["AST Parser<br/>tree-sitter"]
         E["Path Analyzer"]
@@ -70,28 +76,98 @@ flowchart LR
         G["Conflict Detector"]
         H["Dead Code Finder"]
     end
+
+    subgraph AI Intelligence Layer
+        I["AST Chunker"]
+        J["ChromaDB<br/>Vector Store"]
+        K["Knowledge Graph<br/>NetworkX"]
+        L["Hybrid Retriever"]
+        M["Coder Agent<br/>LLM"]
+        N["Verifier Agent<br/>Z3"]
+    end
     
     subgraph Output Interfaces
-        I["LLM Explainer<br/>Gemma 2B"]
-        J["Report Generator"]
-        K["CLI Output"]
-        L["Web UI (Gradio)"]
-        M["REST API (FastAPI)"]
+        O["LLM Explainer<br/>Gemma 2B"]
+        P["Report Generator"]
+        Q["CLI Output"]
+        R["Web UI<br/>Gradio"]
+        S["REST API<br/>FastAPI"]
     end
     
     A --> C --> F
     B --> D --> E --> F
-    F --> G --> I --> J
-    F --> H --> I
-    J --> K
+    D --> I --> J
+    D --> K
+    F --> G --> L
     J --> L
-    J --> M
+    K --> L
+    L --> M --> N
+    N -->|"Retry if unsafe"| M
+    N -->|"Verified ✅"| O --> P
+    F --> H --> O
+    P --> Q
+    P --> R
+    P --> S
 ```
 
 ### Core Architecture Components
 1. **Multi-Language AST Scanner:** Uses `tree-sitter` to scan Python and JavaScript/TypeScript source code to detect complex branching patterns like `if is_enabled("flag_name"):`.
 2. **Boolean Satisfiability (SAT) Solver:** Encodes codebase execution paths and feature flag dependencies as pure boolean logic constraints using Microsoft's **Z3 SMT solver**.
 3. **Persisted State & RBAC:** Stores analytical results, RBAC user permissions (`admin`, `analyst`, `viewer`), and multi-environment drifts (dev/staging/prod) in an isolated SQLAlchemy database.
+
+---
+
+## 🤖 AI-Native Intelligence Layer (GraphRAG)
+
+> **The core differentiator.** FlagGuard's AI layer goes far beyond simple LLM prompting — it is a full **GraphRAG + Agentic Remediation** system that retrieves, reasons, and self-corrects.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Gradio UI
+    participant HR as Hybrid Retriever
+    participant VDB as ChromaDB
+    participant KG as Knowledge Graph<br/>NetworkX
+    participant CA as Coder Agent
+    participant VA as Verifier Agent<br/>Z3
+
+    User->>UI: Select conflict & click "🔧 Generate AI Fix"
+    UI->>HR: retrieve_for_conflict(flags, description)
+    HR->>VDB: Semantic search (top-5 similar chunks)
+    HR->>KG: Graph traversal (transitive callers)
+    VDB-->>HR: Code chunks by embedding similarity
+    KG-->>HR: Functions by call-graph impact
+    HR-->>UI: Merged, deduplicated, ranked results
+    UI->>CA: Generate fix (conflict + RAG context)
+    CA-->>VA: Proposed code patch
+    VA->>VA: Z3 SAT verification
+    alt Fix introduces new conflict
+        VA-->>CA: ❌ Error feedback (retry)
+        CA-->>VA: Corrected patch
+    end
+    VA-->>UI: ✅ Verified safe patch
+    UI-->>User: Display fix + reasoning chain
+```
+
+### Architecture Components
+
+| Component | Technology | File | Purpose |
+|-----------|-----------|------|---------|
+| **AST Chunker** | tree-sitter | `rag/ingester.py` | Extracts function-level semantic chunks (not naive line splits) with metadata: `function_name`, `class_name`, `flags_referenced` |
+| **Vector Store** | ChromaDB + SentenceTransformers | `rag/store.py` | Persists embeddings for semantic similarity search |
+| **Knowledge Graph** | NetworkX DiGraph | `ai/graph.py` | Directed call graph with transitive impact analysis via reverse BFS |
+| **Hybrid Retriever** | ChromaDB + NetworkX | `rag/retriever.py` | Fuses semantic search with graph traversal; items found by both get a relevance boost |
+| **Coder Agent** | Ollama / Gemma 2B | `ai/agent.py` | Generates `git diff` patches grounded in retrieved source code |
+| **Verifier Agent** | Z3 SMT Solver | `ai/agent.py` | Mathematically proves patches don't introduce new conflicts |
+| **Agentic Loop** | Max 3 retries | `ai/agent.py` | Coder → Verifier → Retry cycle; only verified patches reach the user |
+
+### Key Design Decisions
+
+1.  **AST-Aware Chunking > Line Splitting:** Traditional RAG systems chunk code by fixed line counts (50-100 lines), splitting functions mid-body and mixing unrelated logic. FlagGuard uses tree-sitter to extract *complete* functions as atomic chunks, dramatically improving retrieval precision.
+
+2.  **Graph + Vector = Hybrid Retrieval:** Semantic search alone misses transitive dependencies (e.g., `checkout()` → `auth_check()` → `is_enabled("premium")`). The Knowledge Graph catches these via reverse BFS traversal, while ChromaDB catches conceptually similar code. Items found by *both* strategies are ranked highest.
+
+3.  **Formal Verification in the Loop:** Unlike standard AI coding assistants that suggest unverified patches, FlagGuard's Verifier Agent feeds every proposed fix back through the Z3 SAT solver. Only mathematically proven-safe patches are presented to the user — **zero hallucinated fixes**.
 
 ---
 
