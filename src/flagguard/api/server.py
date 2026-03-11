@@ -87,6 +87,7 @@ from flagguard.api.analytics import router as analytics_router
 from flagguard.api.reports import router as reports_router
 from flagguard.api.plugins import router as plugins_router
 from flagguard.api.iac import router as iac_router
+from flagguard.api.risk import router as risk_router
 
 # All routes prefixed with /api/v1
 app.include_router(auth_router, prefix="/api/v1")
@@ -102,6 +103,7 @@ app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(plugins_router, prefix="/api/v1")
 app.include_router(iac_router, prefix="/api/v1")
+app.include_router(risk_router, prefix="/api/v1")
 
 
 # --- Health Check ---
