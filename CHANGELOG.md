@@ -43,6 +43,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_ast_chunker.py`: 10 tests covering AST chunking, flag extraction, metadata
   - `test_knowledge_graph.py`: 11 tests covering call graph, transitive callers, impact analysis
 
+### Added — Predictive Risk ML Pipeline (XGBoost + SHAP)
+
+- **Feature Engineering** (`scripts/generate_training_data.py`)
+  - Mines git history via GitPython for 15 per-commit tabular features
+  - Synthetic data augmentation for class-balanced training datasets
+  - Heuristic labeling based on flag patterns and conflict risk indicators
+
+- **Model Training** (`notebooks/train_risk_model.py`)
+  - XGBoost classifier with GridSearchCV (5-fold CV)
+  - MLflow experiment tracking (params, metrics, model artifacts)
+  - Exports best model to `models/risk_model.joblib`
+
+- **SHAP Explainability** (`ai/risk_explainer.py`)
+  - SHAP TreeExplainer for per-prediction feature attributions
+  - Waterfall plot generation (saved as PNG)
+  - Top-8 contributing factors with direction and magnitude
+
+- **Risk Prediction API** (`api/risk.py`)
+  - `POST /api/v1/predict-risk`: Returns risk score + SHAP factors
+  - `GET /api/v1/risk-model-info`: Returns model metadata
+  - Fully documented Pydantic request/response models
+  - Total API endpoints: 33
+
+- **Risk Prediction Dashboard** (`ui/tabs/risk_dashboard.py`)
+  - 14 interactive feature sliders with real-time prediction
+  - SVG-based circular risk gauge (0-100%)
+  - SHAP factor table + feature impact bar chart
+
+- **ML Dependencies** (`pyproject.toml`)
+  - New `[ml]` optional group: xgboost, shap, mlflow, gitpython, scikit-learn, pandas, joblib
+
 ## [2.0.0] - 2026-03-03
 
 ### Added

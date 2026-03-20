@@ -171,6 +171,66 @@ sequenceDiagram
 
 ---
 
+## 📈 Predictive Risk ML Pipeline (XGBoost + SHAP)
+
+> **Predict conflicts before they happen.** A classical ML pipeline that learns from your git history to predict whether a commit is likely to introduce feature flag conflicts — and explains *why* using SHAP.
+
+```mermaid
+flowchart LR
+    subgraph Data Pipeline
+        A["Git History<br/>GitPython"] --> B["Feature<br/>Engineering"]
+        B --> C["training_data.csv<br/>15 features"]
+    end
+
+    subgraph Model Training
+        C --> D["XGBoost<br/>GridSearchCV"]
+        D --> E["MLflow<br/>Experiment Tracking"]
+        D --> F["risk_model.joblib"]
+    end
+
+    subgraph Inference & Explainability
+        F --> G["SHAP<br/>TreeExplainer"]
+        G --> H["Waterfall Plot<br/>Top Factors"]
+    end
+
+    subgraph Serving
+        F --> I["FastAPI<br/>POST /predict-risk"]
+        H --> J["Gradio<br/>Risk Dashboard"]
+        I --> J
+    end
+```
+
+### ML Architecture Components
+
+| Component | Technology | File | Purpose |
+|-----------|-----------|------|---------
+| **Feature Extractor** | GitPython | `scripts/generate_training_data.py` | Mines 15 per-commit features from `.git` history (flag mentions, file types, commit hour, author experience) |
+| **Data Augmentation** | NumPy | `scripts/generate_training_data.py` | Synthetic sample generation for class-balanced training (30% conflict rate) |
+| **Model Training** | XGBoost + scikit-learn | `notebooks/train_risk_model.py` | GridSearchCV (5-fold CV) over depth/LR/estimators; logs to MLflow |
+| **Experiment Tracking** | MLflow | `mlruns/` | Tracks params, metrics (AUC, F1, Precision, Recall), and model artifacts |
+| **SHAP Explainer** | SHAP TreeExplainer | `ai/risk_explainer.py` | Per-prediction feature attributions with waterfall plot generation |
+| **REST API** | FastAPI + Pydantic | `api/risk.py` | `POST /predict-risk` returns score + SHAP factors; `GET /risk-model-info` |
+| **Dashboard** | Gradio | `ui/tabs/risk_dashboard.py` | SVG risk gauge (0-100%), SHAP factor table, feature impact chart |
+
+### Engineered Features (14 dimensions)
+
+```text
+┌─── Diff Metrics ──────────────┐  ┌─── Code Metrics ─────────────┐
+│  files_modified               │  │  py_files_modified            │
+│  lines_added / lines_deleted  │  │  js_files_modified            │
+│  diff_size_ratio (del/add)    │  │  config_files_modified        │
+│  flag_mentions_count          │  │  has_test_changes             │
+└───────────────────────────────┘  └───────────────────────────────┘
+
+┌─── Temporal Metrics ──────────┐  ┌─── Author Metrics ────────────┐
+│  commit_hour (0-23)           │  │  author_commit_count          │
+│  is_merge_commit              │  │  message_length               │
+│  days_since_last_commit       │  │                               │
+└───────────────────────────────┘  └───────────────────────────────┘
+```
+
+---
+
 ## 📚 Comprehensive Documentation Directory
 
 We maintain rigorous documentation standards. Explore the architecture and usage guides below:

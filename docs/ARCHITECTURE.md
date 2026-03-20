@@ -97,9 +97,33 @@ flowchart TD
 ```
 
 ### 4. Interfaces
-- **Web UI**: A Gradio-based dashboard with RBAC, Plotly charts, dependency graphs, multi-environment management, and the **🤖 AI Remediation** tab showing verified code fixes.
-- **REST API**: A FastAPI backend with 31 endpoints, JWT auth, and SQLite/PostgreSQL support.
+- **Web UI**: A Gradio-based dashboard with RBAC, Plotly charts, dependency graphs, multi-environment management, the **🤖 AI Remediation** tab, and the **📈 Risk Prediction** dashboard.
+- **REST API**: A FastAPI backend with 33 endpoints, JWT auth, and SQLite/PostgreSQL support.
 - **CLI**: A Click-based terminal tool for CI/CD integration.
+
+### 5. Predictive Risk ML Pipeline
+
+| Component | Technology | Module | Description |
+|-----------|-----------|--------|-------------|
+| **Feature Extractor** | GitPython | `scripts/generate_training_data.py` | Mines 15 per-commit features from `.git` history |
+| **Model Training** | XGBoost + GridSearchCV | `notebooks/train_risk_model.py` | 5-fold CV with MLflow experiment tracking |
+| **SHAP Explainer** | SHAP TreeExplainer | `ai/risk_explainer.py` | Per-prediction feature attributions + waterfall plots |
+| **REST Endpoint** | FastAPI + Pydantic | `api/risk.py` | `POST /predict-risk` + `GET /risk-model-info` |
+| **Dashboard** | Gradio | `ui/tabs/risk_dashboard.py` | SVG gauge, SHAP factor table, feature impact chart |
+
+```mermaid
+flowchart TD
+    A["git log"] --> B["Feature Engineering<br/>15 dimensions"]
+    B --> C["training_data.csv"]
+    C --> D["XGBoost<br/>GridSearchCV 5-fold"]
+    D --> E["MLflow Tracking<br/>AUC, F1, Precision"]
+    D --> F["risk_model.joblib"]
+    F --> G["SHAP TreeExplainer"]
+    F --> H["FastAPI POST /predict-risk"]
+    G --> I["Waterfall Plot + Top Factors"]
+    H --> J["📈 Gradio Risk Dashboard"]
+    I --> J
+```
 
 ---
 
@@ -128,10 +152,12 @@ flagguard/
 |-- api/                  # REST API (FastAPI routes)
 |   |-- auth.py           # JWT auth + RBAC
 |   |-- server.py         # Main Uvicorn app
+|   |-- risk.py           # POST /predict-risk + GET /risk-model-info (NEW)
 |
-|-- ai/                   # AI Intelligence Layer (NEW)
+|-- ai/                   # AI Intelligence Layer
 |   |-- graph.py          # NetworkX Knowledge Graph builder
 |   |-- agent.py          # Agentic Remediation Loop (Coder + Verifier)
+|   |-- risk_explainer.py # SHAP TreeExplainer for risk predictions (NEW)
 |
 |-- analysis/             # Formal Verification Engine
 |   |-- sat_solver.py     # Z3 constraint encoding
@@ -165,8 +191,22 @@ flagguard/
 |-- ui/                   # Web Interface
     |-- app.py            # Gradio Web UI entry point
     |-- tabs/             # Dashboard modules
-    |   |-- remediation.py  # 🤖 AI Remediation tab (NEW)
+    |   |-- remediation.py   # 🤖 AI Remediation tab
+    |   |-- risk_dashboard.py # 📈 Risk Prediction tab (NEW)
     |-- handlers.py       # Shared business logic
+
+scripts/
+|-- generate_training_data.py  # Git history → training_data.csv (NEW)
+
+notebooks/
+|-- train_risk_model.py        # XGBoost + MLflow pipeline (NEW)
+
+models/
+|-- risk_model.joblib          # Exported trained model (NEW)
+|-- risk_model_meta.json       # Feature metadata (NEW)
+
+data/
+|-- training_data.csv          # Mined git features (NEW)
 ```
 
 
