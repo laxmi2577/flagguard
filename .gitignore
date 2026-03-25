@@ -53,6 +53,11 @@ Thumbs.db
 .flagguard_cache/
 .flagguard/
 flagguard.db
+*.db
 flagguard-report.*
 debug_*.py
 migrate_db.py
+
+# Empty placeholder dirs (recreated as needed)
+models/
+data/
