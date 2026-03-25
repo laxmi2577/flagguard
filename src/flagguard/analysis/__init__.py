@@ -13,6 +13,10 @@ from flagguard.analysis.dead_code import DeadCodeFinder
 from flagguard.analysis.path_analyzer import PathAnalyzer, CodePath
 from flagguard.analysis.constraint_encoder import ConstraintEncoder
 
+# Re-export domain types so consumers can do:
+#   from flagguard.analysis import ConflictType, ConflictSeverity
+from flagguard.core.models import ConflictType, ConflictSeverity
+
 __all__ = [
     "FlagSATSolver",
     "ConflictDetector",
@@ -20,6 +24,8 @@ __all__ = [
     "PathAnalyzer",
     "CodePath",
     "ConstraintEncoder",
+    "ConflictType",
+    "ConflictSeverity",
 ]
 
 

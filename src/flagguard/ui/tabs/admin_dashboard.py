@@ -403,34 +403,46 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                 def load_plugins():
                     try:
                         from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import PluginConfig
                         db = SessionLocal()
-                        # Plugins table may not exist — use raw SQL to check
-                        try:
-                            from sqlalchemy import text
-                            rows = db.execute(text("SELECT * FROM plugins ORDER BY created_at DESC")).fetchall()
-
-                            return [{"id": r[0], "name": r[1], "type": r[2], "version": r[3],
-                                     "enabled": r[5], "description": r[4]} for r in rows] or [{"message": "No plugins registered"}]
-                        except Exception:
-
+                        plugins = db.query(PluginConfig).order_by(PluginConfig.created_at.desc()).all()
+                        db.close()
+                        if not plugins:
                             return [{"message": "Plugin system ready — no plugins registered yet. Register one below."}]
+                        return [{"id": p.id, "name": p.name, "type": p.type,
+                                 "description": p.description,
+                                 "enabled": p.is_active,
+                                 "builtin": p.is_builtin,
+                                 "version": (p.config or {}).get("version", "N/A"),
+                                 "created": str(p.created_at)[:16]} for p in plugins]
                     except Exception as e:
-                        return {"error": str(e)}
+                        return [{"error": str(e)}]
 
                 def register_plugin(name, ptype, version, desc):
                     if not name:
                         return "Enter a plugin name."
                     try:
                         from flagguard.core.db import SessionLocal
-                        from sqlalchemy import text
-                        import uuid
+                        from flagguard.core.models.tables import PluginConfig
                         db = SessionLocal()
-                        pid = uuid.uuid4().hex
-                        db.execute(text(
-                            "INSERT INTO plugins (id, name, type, version, description, enabled, created_at) "
-                            "VALUES (:id, :name, :type, :ver, :desc, 1, datetime('now'))"
-                        ), {"id": pid, "name": name, "type": ptype, "ver": version, "desc": desc})
+                        # Check if plugin with same name already exists
+                        existing = db.query(PluginConfig).filter(PluginConfig.name == name.strip()).first()
+                        if existing:
+                            db.close()
+                            return f"Plugin '{name}' already exists (ID: {existing.id[:8]}...)."
+                        plugin = PluginConfig(
+                            name=name.strip(),
+                            type=ptype or "parser",
+                            description=desc or "",
+                            config={"version": version or "1.0.0"},
+                            is_builtin=False,
+                            is_active=True,
+                        )
+                        db.add(plugin)
                         db.commit()
+                        db.refresh(plugin)
+                        pid = plugin.id
+                        db.close()
                         return f"✅ Registered: {name} (ID: {pid[:8]}...)"
                     except Exception as e:
                         return f"Error: {e}"
@@ -440,10 +452,15 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         return "Enter a Plugin ID."
                     try:
                         from flagguard.core.db import SessionLocal
-                        from sqlalchemy import text
+                        from flagguard.core.models.tables import PluginConfig
                         db = SessionLocal()
-                        db.execute(text("UPDATE plugins SET enabled = :e WHERE id = :id"), {"e": 1 if enabled else 0, "id": pid.strip()})
+                        plugin = db.query(PluginConfig).filter(PluginConfig.id == pid.strip()).first()
+                        if not plugin:
+                            db.close()
+                            return f"Plugin not found with ID: {pid.strip()}"
+                        plugin.is_active = bool(enabled)
                         db.commit()
+                        db.close()
                         return f"Plugin {'enabled' if enabled else 'disabled'}."
                     except Exception as e:
                         return f"Error: {e}"
@@ -453,11 +470,16 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         return "Enter a Plugin ID."
                     try:
                         from flagguard.core.db import SessionLocal
-                        from sqlalchemy import text
+                        from flagguard.core.models.tables import PluginConfig
                         db = SessionLocal()
-                        db.execute(text("DELETE FROM plugins WHERE id = :id"), {"id": pid.strip()})
+                        plugin = db.query(PluginConfig).filter(PluginConfig.id == pid.strip()).first()
+                        if not plugin:
+                            db.close()
+                            return f"Plugin not found with ID: {pid.strip()}"
+                        db.delete(plugin)
                         db.commit()
-                        return "Plugin removed."
+                        db.close()
+                        return f"Plugin '{plugin.name}' removed."
                     except Exception as e:
                         return f"Error: {e}"
 

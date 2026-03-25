@@ -247,9 +247,16 @@ def create_app():
     return app
 
 def launch():
+    import os
     import threading
     import time
     import uvicorn
+
+    # Guard against Windows cp1252 console encoding issue with emoji
+    if os.name == "nt":
+        import sys
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
     # ── Start FastAPI API server on port 8000 in background ──────────────
     def run_api():
@@ -259,12 +266,12 @@ def launch():
 
     api_thread = threading.Thread(target=run_api, daemon=True, name="api-server")
     api_thread.start()
-    print("✅ API server starting on http://localhost:8000 ...")
+    print("[OK] API server starting on http://localhost:8000 ...")
     time.sleep(1)  # Give API server a moment to bind
 
     # ── Start Gradio UI on port 7860 ────────────────────────────────────
     app = create_app()
-    print("✅ Gradio UI starting on http://localhost:7860 ...")
+    print("[OK] Gradio UI starting on http://localhost:7860 ...")
     app.launch(show_error=True, allowed_paths=["."])
 
 if __name__ == "__main__":

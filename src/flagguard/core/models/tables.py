@@ -201,7 +201,7 @@ class PluginConfig(Base):
     """Persisted plugin configuration."""
     __tablename__ = "plugins"
 
-    id = Column(String, primary_key=True)  # e.g. "launchdarkly", "mutual_exclusion"
+    id = Column(String, primary_key=True, default=generate_uuid)  # UUID for dynamic, readable IDs for builtins
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)  # "parser" or "rule"
     description = Column(String, default="")
