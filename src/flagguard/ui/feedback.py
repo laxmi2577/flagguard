@@ -1,24 +1,60 @@
 """Feedback Telemetry UI Component (Phase 3 — Step 3.3).
 
-Provides a reusable Gradio component that adds 👍/👎 feedback buttons
-below any LLM output. Stores feedback in SQLAlchemy for DPO training.
+Provides a production-grade, reusable Gradio component for collecting
+👍/👎 preference signals on LLM outputs. These signals feed the DPO
+(Direct Preference Optimization) alignment pipeline.
+
+Architecture:
+    - Feedback is stored atomically in SQLAlchemy using a context-managed session
+    - Rate limiting per session_hash prevents double-submission spam
+    - Graceful degradation: feedback always attempts to write, but UI never
+      fails or blocks the user if the DB is unavailable
+    - The component is fully decoupled from Gradio layout — it only returns
+      Gradio State objects and registers button click handlers
 
 Usage:
     from flagguard.ui.feedback import create_feedback_component
 
-    # In your Gradio tab:
-    with gr.Row():
-        output_text = gr.Markdown()
-    feedback_html, feedback_state = create_feedback_component(
-        output_ref=output_text,
-        context_type="explanation",
-    )
+    # In any Gradio tab:
+    with gr.Blocks():
+        output_box = gr.Markdown()
+
+        # Wire component — returns state refs for your event handlers to populate
+        status_html, prompt_state, response_state = create_feedback_component(
+            context_type="fix",
+        )
+
+        # After your LLM call, update the states so feedback knows what to rate:
+        generate_btn.click(
+            fn=my_llm_fn,
+            inputs=[...],
+            outputs=[output_box, prompt_state, response_state],
+        )
 """
 
+from __future__ import annotations
+
+import hashlib
+import time
+from typing import Final
+
 import gradio as gr
+
 from flagguard.core.logging import get_logger
 
-logger = get_logger("ui.feedback")
+log = get_logger("ui.feedback")
+
+# In-memory rate limit: hash → last_submission_unix_ts
+_rate_limit_cache: dict[str, float] = {}
+_RATE_LIMIT_SECONDS: Final[int] = 5
+
+
+# ── DB persistence ────────────────────────────────────────────────────────────
+
+def _compute_session_hash(prompt: str, response: str, feedback_type: str) -> str:
+    """SHA-256 fingerprint of a specific feedback submission to detect duplicates."""
+    payload = f"{prompt}|{response}|{feedback_type}"
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 def store_feedback(
@@ -28,108 +64,175 @@ def store_feedback(
     context_type: str = "explanation",
     conflict_id: str | None = None,
     user_id: str | None = None,
-):
-    """Store user feedback in the database.
+) -> tuple[bool, str]:
+    """Persist a feedback record atomically.
+
+    Uses an explicit SQLAlchemy session with try/except/rollback/close
+    to guarantee no connection leaks even if the commit fails.
 
     Args:
-        prompt: The user's input/question.
-        response: The LLM's output that was rated.
+        prompt: The user query / LLM input that was rated.
+        response: The LLM output that was rated.
         feedback: "positive" or "negative".
-        context_type: Type of output (explanation, fix, risk, chat).
-        conflict_id: Optional conflict ID for context.
-        user_id: Optional user ID.
+        context_type: Output type — "explanation", "fix", "risk", or "chat".
+        conflict_id: Optional reference to the flagguard conflict being discussed.
+        user_id: Optional authenticated user ID.
 
     Returns:
-        True if stored successfully, False otherwise.
+        Tuple of (success: bool, error_message: str).
     """
+    # Input validation
+    if feedback not in ("positive", "negative"):
+        return False, f"Invalid feedback value: {feedback!r}"
+    if not prompt.strip() or not response.strip():
+        return False, "Prompt or response is empty — nothing to rate."
+
+    # Rate limiting
+    session_hash = _compute_session_hash(prompt, response, feedback)
+    now = time.monotonic()
+    last = _rate_limit_cache.get(session_hash, 0.0)
+    if now - last < _RATE_LIMIT_SECONDS:
+        return False, "Feedback already recorded for this response."
+    _rate_limit_cache[session_hash] = now
+
     try:
         from flagguard.core.db import SessionLocal
         from flagguard.core.models.tables import LLMFeedback
+    except ImportError as exc:
+        log.error("DB import failed — feedback not stored: %s", exc)
+        return False, "Database unavailable."
 
-        db = SessionLocal()
-        try:
-            entry = LLMFeedback(
-                user_id=user_id,
-                prompt=prompt,
-                response=response,
-                feedback=feedback,
-                context_type=context_type,
-                conflict_id=conflict_id,
-                metadata_={"source": "gradio_ui"},
-            )
-            db.add(entry)
-            db.commit()
-            logger.info(f"Feedback stored: {feedback} for {context_type}")
-            return True
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Failed to store feedback: {e}")
-            return False
-        finally:
-            db.close()
-    except Exception as e:
-        logger.error(f"Database unavailable for feedback: {e}")
-        return False
+    db = SessionLocal()
+    try:
+        entry = LLMFeedback(
+            user_id=user_id,
+            prompt=prompt,
+            response=response,
+            feedback=feedback,
+            context_type=context_type,
+            conflict_id=conflict_id,
+            metadata_={
+                "source": "gradio_ui",
+                "context_type": context_type,
+                "session_hash": session_hash,
+            },
+        )
+        db.add(entry)
+        db.commit()
+        log.info(
+            "Feedback stored: %s | context=%s | hash=%s",
+            feedback, context_type, session_hash,
+        )
+        return True, ""
+    except Exception as exc:
+        db.rollback()
+        log.error("DB commit failed: %s", exc)
+        return False, f"Failed to save: {exc}"
+    finally:
+        db.close()
 
 
-def create_feedback_component(context_type: str = "explanation"):
-    """Create a 👍/👎 feedback component for a Gradio tab.
+# ── Gradio Component ──────────────────────────────────────────────────────────
+
+def create_feedback_component(context_type: str = "explanation") -> tuple:
+    """Render 👍/👎 buttons and wire feedback collection to the DB.
+
+    Call this **inside** a `gr.Blocks()` or `gr.TabItem()` context.
+    The returned state objects must be listed in the `outputs` of whatever
+    event populates the LLM response — that's how the feedback component
+    knows which prompt+response pair the user is rating.
 
     Args:
-        context_type: The type of LLM output (explanation, fix, risk, chat).
+        context_type: Type label for the LLM output being rated.
+            One of "explanation", "fix", "risk", "chat", "dependency".
 
     Returns:
-        Tuple of (feedback_html, prompt_state, response_state).
+        Tuple of:
+            - feedback_status (gr.HTML): shows confirmation/error messages
+            - prompt_state (gr.State): hidden state — write the user's prompt here
+            - response_state (gr.State): hidden state — write the LLM response here
     """
-    # Hidden states to store the current prompt/response
     prompt_state = gr.State("")
     response_state = gr.State("")
 
-    with gr.Row():
+    with gr.Row(elem_classes=["feedback-row"]):
         gr.HTML(
-            "<div style='display:flex;align-items:center;gap:8px;"
-            "padding:8px 0;border-top:1px solid rgba(212,175,55,0.1);"
-            "margin-top:8px;'>"
-            "<span style='color:#64748b;font-size:12px;'>Was this helpful?</span>"
+            "<div style='"
+            "display:flex;align-items:center;gap:10px;"
+            "padding:8px 0 4px 0;"
+            "border-top:1px solid rgba(212,175,55,0.15);"
+            "margin-top:12px;"
+            "'>"
+            "<span style='"
+            "color:#64748b;font-size:12px;font-style:italic;"
+            "'>Rate this response to improve FlagGuard AI:</span>"
             "</div>"
         )
         thumbs_up = gr.Button(
-            "👍", elem_classes=["feedback-btn"], scale=0, min_width=50
+            "👍  Helpful",
+            elem_id=f"feedback-up-{context_type}",
+            scale=0,
+            size="sm",
+            variant="secondary",
         )
         thumbs_down = gr.Button(
-            "👎", elem_classes=["feedback-btn"], scale=0, min_width=50
+            "👎  Not helpful",
+            elem_id=f"feedback-down-{context_type}",
+            scale=0,
+            size="sm",
+            variant="secondary",
         )
         feedback_status = gr.HTML("")
 
-    def handle_feedback(feedback_type, prompt, response):
-        """Handle a feedback button click."""
+    def _handle(feedback_type: str, prompt: str, response: str) -> str:
+        """Handle a feedback click — returns HTML status message."""
         if not prompt or not response:
-            return "<span style='color:#f59e0b;font-size:12px;'>⚠️ No output to rate</span>"
+            return (
+                "<span style='color:#f59e0b;font-size:12px;'>"
+                "⚠️ No LLM output loaded — generate a response first, then rate it."
+                "</span>"
+            )
 
-        success = store_feedback(
+        ok, err = store_feedback(
             prompt=prompt,
             response=response,
             feedback=feedback_type,
             context_type=context_type,
         )
 
-        if success:
+        if ok:
             icon = "👍" if feedback_type == "positive" else "👎"
+            colour = "#22c55e" if feedback_type == "positive" else "#f59e0b"
             return (
-                f"<span style='color:#22c55e;font-size:12px;'>"
-                f"✅ {icon} Feedback recorded! Helps improve FlagGuard AI.</span>"
+                f"<span style='color:{colour};font-size:12px;font-weight:500;'>"
+                f"✅ {icon} Recorded — thank you! This trains FlagGuard-Coder."
+                f"</span>"
             )
-        return "<span style='color:#ef4444;font-size:12px;'>❌ Failed to save</span>"
+
+        if "already recorded" in err:
+            return (
+                "<span style='color:#64748b;font-size:12px;'>"
+                "ℹ️ Feedback already saved for this response."
+                "</span>"
+            )
+
+        return (
+            f"<span style='color:#ef4444;font-size:12px;'>"
+            f"❌ Could not save feedback: {err}"
+            f"</span>"
+        )
 
     thumbs_up.click(
-        fn=lambda p, r: handle_feedback("positive", p, r),
+        fn=lambda p, r: _handle("positive", p, r),
         inputs=[prompt_state, response_state],
         outputs=[feedback_status],
+        api_name=False,
     )
     thumbs_down.click(
-        fn=lambda p, r: handle_feedback("negative", p, r),
+        fn=lambda p, r: _handle("negative", p, r),
         inputs=[prompt_state, response_state],
         outputs=[feedback_status],
+        api_name=False,
     )
 
     return feedback_status, prompt_state, response_state
