@@ -229,6 +229,49 @@ flowchart LR
 └───────────────────────────────┘  └───────────────────────────────┘
 ```
 
+```
+
+---
+
+## 🚀 Human-Aligned Fine-Tuning (QLoRA + DPO)
+
+> **FlagGuard-Coder:** A domain-specific LLM fine-tuned to explain flag conflicts, generate patches, and assess risk. Aligned with human preferences using Direct Preference Optimization (DPO).
+
+```mermaid
+flowchart LR
+    subgraph Data Generation
+        A["Synthetic<br/>Templates"] --> B["1,000+ SFT<br/>JSONL Pairs"]
+    end
+
+    subgraph QLoRA Training
+        B --> C["Llama-3.1-8B<br/>(4-bit)"]
+        C --> D["SFTTrainer + PEFT<br/>(r=16)"]
+        D --> E["flagguard-sft-lora"]
+    end
+
+    subgraph DPO Alignment
+        E --> F["UI Telemetry<br/>👍/👎 Feedback"]
+        F --> G["DPOTrainer<br/>(Preference Data)"]
+        G --> H["flagguard-dpo-lora"]
+    end
+
+    subgraph Deployment
+        H --> I["llama.cpp<br/>Merge & Quantize"]
+        I --> J["flagguard-coder<br/>(Ollama GGUF)"]
+    end
+```
+
+### Fine-Tuning Components
+
+| Component | Technology | File | Purpose |
+|-----------|-----------|------|---------|
+| **SFT Dataset** | Python | `scripts/generate_sft_dataset.py` | Generates 1K+ ChatML instruction pairs for conflict explanation, fixes, and dead code analysis |
+| **SFT Training** | Unsloth + TRL | `notebooks/flagguard_sft_training.py` | Google Colab notebook for QLoRA (4-bit) fine-tuning of Llama 3.1 |
+| **Telemetry UI** | Gradio | `ui/feedback.py` | Collects 👍/👎 human preferences on LLM outputs in the AI Remediation tab |
+| **DPO Export** | SQLAlchemy | `scripts/export_preferences.py` | Converts UI feedback from DB into DPO-ready JSONL (prompt/chosen/rejected) |
+| **DPO Alignment** | DPOTrainer | `notebooks/flagguard_dpo_training.py` | Aligns the SFT model with human preferences to reduce hallucination |
+| **Model Export** | llama.cpp + Ollama | `scripts/export_gguf.py` | Generates Modelfile and documentation for merging adapters to GGUF format |
+
 ---
 
 ## 📚 Comprehensive Documentation Directory

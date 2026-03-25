@@ -58,9 +58,16 @@ class OllamaClient:
             self._client = ollama.Client(host=self.config.host)
             
             # Test connection by listing models
-            self._client.list()
+            models_list = self._client.list()
+            available_models = [m.get("name") for m in models_list.get("models", [])]
+            
+            # Auto-select flagguard-coder if available and no override specified
+            if "flagguard-coder:latest" in available_models and self.config.model == "gemma2:2b":
+                self.config.model = "flagguard-coder:latest"
+                logger.info("Detected flagguard-coder! Using optimized fine-tuned model.")
+                
             self.is_available = True
-            logger.info(f"Ollama connected at {self.config.host}")
+            logger.info(f"Ollama connected at {self.config.host}. Using model: {self.config.model}")
         except ImportError:
             logger.warning("Ollama package not installed")
         except Exception as e:

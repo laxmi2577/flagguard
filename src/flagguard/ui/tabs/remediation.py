@@ -66,6 +66,8 @@ def create_remediation_tab():
                             "*Select a conflict and click 'Generate AI Fix' "
                             "to see the agent's code patch.*"
                         )
+                        from flagguard.ui.feedback import create_feedback_component
+                        feedback_html, prompt_state, response_state = create_feedback_component("fix")
 
                     with gr.TabItem("🧠 Agent Reasoning"):
                         reasoning_output = gr.Markdown(
@@ -88,6 +90,8 @@ def create_remediation_tab():
                     "*No reasoning data.*",
                     "*No context retrieved.*",
                     _status_html("⚠️ No conflict selected", "warning"),
+                    "",
+                    "",
                 )
 
             try:
@@ -118,6 +122,10 @@ def create_remediation_tab():
 
                 # Step 1: Retrieve context via Hybrid Retriever
                 status = _status_html("🔍 Retrieving code context via GraphRAG...", "active")
+                
+                # We yield early to show status change if this was a generator,
+                # but currently grad.Button.click doesn't use generators here.
+                # (Skipped yielding for simplicity - Gradio needs .success for generators)
 
                 if flags:
                     results = retriever.retrieve_for_conflict(
@@ -152,7 +160,7 @@ def create_remediation_tab():
                     "success" if result.verified else "error",
                 )
 
-                return fix_md, reasoning_md, context_md, final_status
+                return fix_md, reasoning_md, context_md, final_status, conflict_desc, fix_md
 
             except Exception as e:
                 logger.error(f"Remediation failed: {e}")
@@ -161,12 +169,14 @@ def create_remediation_tab():
                     "*Remediation failed.*",
                     "*Could not retrieve context.*",
                     _status_html(f"❌ Error: {str(e)[:80]}", "error"),
+                    "",
+                    "",
                 )
 
         remediate_btn.click(
             fn=run_remediation,
             inputs=[conflict_selector, gr.State({})],
-            outputs=[fix_output, reasoning_output, rag_context_output, status_indicator],
+            outputs=[fix_output, reasoning_output, rag_context_output, status_indicator, prompt_state, response_state],
         )
 
     return tab, conflict_selector, conflict_detail

@@ -210,3 +210,26 @@ class PluginConfig(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+# --- LLM Feedback (DPO Telemetry) ---
+
+class LLMFeedback(Base):
+    """Stores user feedback (👍/👎) on LLM outputs for DPO alignment.
+
+    Each row captures a prompt→response pair with a human preference signal.
+    Exported to JSONL for Direct Preference Optimization (DPO) training.
+    """
+    __tablename__ = "llm_feedback"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    prompt = Column(Text, nullable=False)          # The user's question/input
+    response = Column(Text, nullable=False)        # The LLM's output
+    feedback = Column(String, nullable=False)      # "positive" or "negative"
+    context_type = Column(String, default="explanation")  # explanation, fix, risk, chat
+    conflict_id = Column(String, nullable=True)    # Optional: which conflict was being explained
+    metadata_ = Column("metadata", JSON, default=dict)  # Extra context (model, temperature, etc.)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="feedback")
+

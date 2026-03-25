@@ -125,6 +125,17 @@ flowchart TD
     I --> J
 ```
 
+### 6. Human-Aligned Fine-Tuning (QLoRA + DPO)
+
+| Component | Technology | Module | Description |
+|-----------|-----------|--------|-------------|
+| **SFT Dataset** | Python | `scripts/generate_sft_dataset.py` | Generates ChatML instruction pairs |
+| **SFT Training** | Unsloth + TRL | `notebooks/flagguard_sft_training.py` | QLoRA (4-bit) fine-tuning notebook |
+| **Telemetry UI** | Gradio | `ui/feedback.py` | Collects 👍/👎 preferences on outputs |
+| **DPO Export** | SQLAlchemy | `scripts/export_preferences.py` | JSONL export for preference training |
+| **DPO Alignment** | DPOTrainer | `notebooks/flagguard_dpo_training.py` | Alignment with human preferences |
+| **Model Export** | llama.cpp/Ollama | `scripts/export_gguf.py` | Modelfile generation for local deployment |
+
 ---
 
 ## 🗄️ Database Schema Mapping

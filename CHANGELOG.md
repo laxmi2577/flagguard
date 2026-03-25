@@ -74,6 +74,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ML Dependencies** (`pyproject.toml`)
   - New `[ml]` optional group: xgboost, shap, mlflow, gitpython, scikit-learn, pandas, joblib
 
+### Added — Human-Aligned Fine-Tuning (QLoRA + DPO)
+
+- **SFT Dataset Generation** (`scripts/generate_sft_dataset.py`)
+  - Generates 1K+ ChatML JSONL instruction pairs for conflict explanation, fixes, risks
+- **SFT Training Pipeline** (`notebooks/flagguard_sft_training.py`)
+  - QLoRA (4-bit) fine-tuning of Llama-3.1-8B-Instruct with Unsloth and TRL
+- **UI Telemetry & Feedback** (`ui/feedback.py`, `core/models/tables.py`)
+  - Added 👍/👎 feedback component in the AI Remediation UI tab
+  - Database persistence for preferences via `LLMFeedback` SQLAlchemy model
+- **DPO Alignment** (`notebooks/flagguard_dpo_training.py`, `scripts/export_preferences.py`)
+  - Export UI feedback to DPO-ready JSONL
+  - `trl.DPOTrainer` alignment via HuggingFace PEFT
+- **Model Deployment** (`scripts/export_gguf.py`, `llm/ollama_client.py`)
+  - Script to merge LoRA adapters and generate Ollama Modelfile
+  - Updated `OllamaClient` to automatically detect and use `flagguard-coder`
+
 ## [2.0.0] - 2026-03-03
 
 ### Added
