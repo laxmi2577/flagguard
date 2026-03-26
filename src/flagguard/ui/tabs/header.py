@@ -18,21 +18,16 @@ DARK_LIGHT_JS = """
     var pref = localStorage.getItem('fg_theme') || 'dark';
     if (pref === 'light') document.body.classList.add('light-mode');
 
-    // Set initial button text based on saved preference
-    setTimeout(function() {
-        var btns = document.querySelectorAll('.theme-toggle-btn');
-        btns.forEach(function(btn) {
-            btn.innerHTML = pref === 'light' ? '☀️ Light' : '🌙 Dark';
-        });
-    }, 100);
-
-    // Global toggle function called by Gradio button
+    // Global toggle function called by Gradio button js=
     window.fgToggleTheme = function() {
         var isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('fg_theme', isLight ? 'light' : 'dark');
+        // Update ALL toggle buttons across dashboards
         var btns = document.querySelectorAll('.theme-toggle-btn');
         btns.forEach(function(btn) {
-            btn.innerHTML = isLight ? '☀️ Light' : '🌙 Dark';
+            // Gradio buttons have inner span elements
+            var sp = btn.querySelector('span') || btn;
+            sp.textContent = isLight ? '\\u2600\\uFE0F Light' : '\\uD83C\\uDF19 Dark';
         });
     };
 })();
@@ -98,7 +93,7 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
         <div style='display:flex;align-items:center;gap:10px;flex:1;'>
             <div style='width:36px;height:36px;background:linear-gradient(135deg,#d4af37,#f59e0b);
                         border-radius:10px;display:flex;align-items:center;justify-content:center;
-                        font-size:1.1rem;flex-shrink:0;'>🛡</div>
+                        font-size:1.1rem;flex-shrink:0;'>&#x1f6e1;</div>
             <div>
                 <div class='brand-text'>FlagGuard</div>
                 <div class='brand-subtitle'><span class='status-dot'></span>Operational</div>
@@ -107,27 +102,17 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
 
         <!-- Notification Bell (Feature A) -->
         <div style='position:relative;cursor:pointer;' onclick='(function(){{ var p=document.getElementById("{uid}-panel"); if(p) p.style.display=p.style.display==="none"?"block":"none"; }})()' title='Notifications'>
-            <span style='font-size:1.3rem;'>🔔</span>
+            <span style='font-size:1.3rem;'>&#x1f514;</span>
             {notif_count_html}
         </div>
 
         <!-- Notification dropdown panel -->
         <div id='{uid}-panel'>
             <div style='font-family:Outfit,sans-serif;font-weight:700;color:#d4af37;margin-bottom:12px;font-size:0.9rem;'>
-                🔔 Notifications ({notif_count})
+                &#x1f514; Notifications ({notif_count})
             </div>
             {notif_items}
         </div>
-
-        <!-- Dark/Light Toggle (Feature D) -->
-        <button class='theme-toggle-btn'
-            onclick='fgToggleTheme()'
-            style='background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.2);
-                   border-radius:8px;color:#94a3b8;font-size:0.75rem;cursor:pointer;
-                   padding:5px 12px;transition:all 0.2s;'
-            title='Toggle dark/light mode'>
-            🌙 Dark
-        </button>
 
         <!-- Role Badge -->
         <span class='{badge_class}'>{role_label}</span>
@@ -141,9 +126,20 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
 def create_shared_header(role: str, user_state: gr.State) -> tuple:
     """Create shared header row with brand, notifications, theme toggle, role badge, sign-out.
     
-    Returns: (header_html component, logout_btn)
+    Returns: (header_html component, logout_btn, theme_btn)
     """
     header_html = gr.HTML(build_header_html(role, 0))
+
+    # Real Gradio button for theme toggle — uses js= for reliable execution
+    theme_btn = gr.Button(
+        "\U0001f319 Dark", elem_classes=["theme-toggle-btn", "glass-btn"],
+        size="sm", min_width=80,
+    )
+    theme_btn.click(
+        fn=None, inputs=None, outputs=None,
+        js="() => { if(window.fgToggleTheme) window.fgToggleTheme(); }"
+    )
+
     logout_btn  = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm", min_width=90)
 
     def refresh_notif_header(uid):
@@ -167,4 +163,4 @@ def create_shared_header(role: str, user_state: gr.State) -> tuple:
 
     user_state.change(refresh_notif_header, inputs=[user_state], outputs=[header_html])
 
-    return header_html, logout_btn
+    return header_html, logout_btn, theme_btn

@@ -16,7 +16,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
         # ── header (notification bell + dark/light toggle built in) ────────
         with gr.Row(elem_classes=["app-header"]):
             with gr.Column(scale=8):
-                header_html, logout_btn = create_shared_header("viewer", user_state)
+                header_html, logout_btn, theme_btn = create_shared_header("viewer", user_state)
 
         # ── role banner ──────────────────────────────────────────────────────
         gr.HTML("""

@@ -9,13 +9,25 @@ import gradio as gr
 from flagguard.ui.helpers import run_analysis
 from flagguard.ui.tabs.header import create_shared_header
 
+def _load_project_choices():
+    """Load all projects as (label, id) tuples for dropdowns."""
+    try:
+        from flagguard.core.db import SessionLocal
+        from flagguard.core.models.tables import Project
+        db = SessionLocal()
+        projs = db.query(Project).order_by(Project.created_at.desc()).all()
+        db.close()
+        return [(f"{p.name}  (ID: {p.id[:8]}...)", p.id) for p in projs]
+    except Exception:
+        return []
+
 def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
     with gr.Group(visible=False) as dashboard:
 
         # ── Header (notification bell + dark/light toggle built in) ─────────
         with gr.Row(elem_classes=["app-header"]):
             with gr.Column(scale=8):
-                header_html, logout_btn = create_shared_header("admin", user_state)
+                header_html, logout_btn, theme_btn = create_shared_header("admin", user_state)
 
         # ── Role Banner ───────────────────────────────────────────────────────
         gr.HTML("""
@@ -499,8 +511,9 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         Block pipeline if health score drops below threshold.
                     </div>""")
                     with gr.Row():
-                        cicd_proj = gr.Textbox(label="Project ID", scale=3)
+                        cicd_proj = gr.Dropdown(label="Select Project", choices=_load_project_choices(), scale=3, interactive=True)
                         cicd_threshold = gr.Slider(label="Min Health % (gate)", minimum=0, maximum=100, value=80, scale=2)
+                        cicd_refresh = gr.Button("🔄", elem_classes=["glass-btn"], scale=0, min_width=40)
                         cicd_btn = gr.Button("Run Gate Check", elem_classes=["glass-btn"], scale=1)
                     with gr.Row():
                         with gr.Column(scale=1):
@@ -534,6 +547,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     except Exception as e:
                         return "-", "-", {"error": str(e)}
 
+                cicd_refresh.click(lambda: gr.update(choices=_load_project_choices()), outputs=[cicd_proj])
                 cicd_btn.click(run_gate, inputs=[cicd_proj, cicd_threshold], outputs=[gate_status_html, gate_health_html, cicd_result])
 
             # ─── Tab 7: Analysis (Admin also runs scans) ──────────────────────
@@ -543,7 +557,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         gr.HTML("<div class='sidebar-title'>All Projects</div>")
                         project_selector = gr.Dropdown(label="", choices=[], interactive=True)
                         with gr.Row():
-                            new_proj_name = gr.Textbox(label="New Project")
+                            new_proj_name = gr.Textbox(label="Project Name", placeholder="e.g. My App v2")
                             create_proj_btn = gr.Button("+ Create", elem_classes=["glass-btn"], size="sm")
                         proj_msg = gr.Textbox(interactive=False, show_label=False)
                         gr.HTML("<div style='margin:12px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
@@ -601,10 +615,11 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
             with gr.TabItem("🌍 Environments"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
-                        env_proj = gr.Textbox(label="Project ID", scale=2)
-                        env_name_inp = gr.Textbox(label="Name", placeholder="dev/staging/prod", scale=2)
+                        env_proj = gr.Dropdown(label="Select Project", choices=_load_project_choices(), scale=2, interactive=True)
+                        env_name_inp = gr.Textbox(label="Environment Name", placeholder="dev / staging / prod", scale=2)
+                        env_refresh = gr.Button("🔄", elem_classes=["glass-btn"], scale=0, min_width=40)
                         env_btn = gr.Button("Create", elem_classes=["glass-btn"], scale=1)
-                    env_overrides = gr.Textbox(label="Flag Overrides (JSON)", lines=3)
+                    env_overrides = gr.Textbox(label="Flag Overrides (JSON)", placeholder='{"dark_mode": true, "beta": false}', lines=3)
                     env_result = gr.JSON(label="Result")
                     gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
                     with gr.Row():
@@ -662,6 +677,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     except Exception as e:
                         return {"error": str(e)}
 
+                env_refresh.click(lambda: gr.update(choices=_load_project_choices()), outputs=[env_proj])
                 env_btn.click(create_env, inputs=[env_proj, env_name_inp, env_overrides], outputs=[env_result])
                 drift_btn.click(compare_drift, inputs=[drift_a, drift_b], outputs=[drift_result])
 
@@ -669,11 +685,12 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
             with gr.TabItem("📑 Reports"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
-                        rep_proj = gr.Textbox(label="Project ID", scale=3)
+                        rep_proj = gr.Dropdown(label="Select Project", choices=_load_project_choices(), scale=3, interactive=True)
                         rep_fmt = gr.Dropdown(label="Format", choices=["json","csv","markdown"], value="json", scale=1)
+                        rep_refresh = gr.Button("🔄", elem_classes=["glass-btn"], scale=0, min_width=40)
                         rep_btn = gr.Button("Generate", elem_classes=["glass-btn"], scale=1)
                     rep_result = gr.JSON(label="Report")
-                    exec_proj = gr.Textbox(label="Project ID (Executive Summary)")
+                    exec_proj = gr.Dropdown(label="Select Project (Executive Summary)", choices=_load_project_choices(), interactive=True)
                     exec_btn = gr.Button("Executive Summary", elem_classes=["glass-btn"])
                     exec_result = gr.JSON(label="Summary")
 
@@ -715,6 +732,8 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     except Exception as e:
                         return {"error": str(e)}
 
+                rep_refresh.click(lambda: (gr.update(choices=_load_project_choices()), gr.update(choices=_load_project_choices())),
+                                  outputs=[rep_proj, exec_proj])
                 rep_btn.click(gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result])
                 exec_btn.click(exec_summary, inputs=[exec_proj], outputs=[exec_result])
 
@@ -812,7 +831,15 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
             except Exception as e:
                 return gr.update(choices=[], value=None)
 
-        user_state.change(refresh_all_projects, inputs=[user_state], outputs=[project_selector])
+        def _refresh_all_dropdowns(uid):
+            """On login, refresh ALL project dropdowns across tabs."""
+            proj_update = refresh_all_projects(uid)
+            choices = _load_project_choices()
+            dd = gr.update(choices=choices, value=choices[0][1] if choices else None)
+            return proj_update, dd, dd, dd, dd
+
+        user_state.change(_refresh_all_dropdowns, inputs=[user_state],
+                          outputs=[project_selector, cicd_proj, env_proj, rep_proj, exec_proj])
 
     return dashboard, logout_btn
 

@@ -329,10 +329,54 @@ body.light-mode {
     --bg-elevated: #f1f5f9;
     --glass-bg: rgba(0,0,0,0.02);
     --glass-border: rgba(212,175,55,0.2);
+    --glass-hover: rgba(0,0,0,0.04);
     --platinum: #1e293b;
     --platinum-dim: #475569;
 }
 body.light-mode .gradio-container { background: #f8f9fa !important; }
+body.light-mode input,
+body.light-mode textarea,
+body.light-mode select {
+    background: #ffffff !important;
+    border-color: rgba(212,175,55,0.25) !important;
+    color: #1e293b !important;
+}
+body.light-mode .glass-card {
+    background: rgba(255,255,255,0.8) !important;
+    border-color: rgba(212,175,55,0.2) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+body.light-mode .metric-card {
+    background: rgba(255,255,255,0.6) !important;
+    border-color: rgba(212,175,55,0.15) !important;
+}
+body.light-mode .glass-btn {
+    background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.04)) !important;
+    color: #92702a !important;
+}
+body.light-mode label, body.light-mode .label-wrap {
+    color: #475569 !important;
+}
+body.light-mode .app-header {
+    background: rgba(255,255,255,0.9) !important;
+    border-color: rgba(212,175,55,0.15) !important;
+}
+body.light-mode .frosted-sidebar {
+    background: rgba(255,255,255,0.5) !important;
+}
+body.light-mode .sidebar-title { color: #475569; }
+body.light-mode .brand-subtitle { color: #64748b; }
+body.light-mode [id$="-panel"] {
+    background: #ffffff !important;
+    border-color: rgba(212,175,55,0.2) !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1) !important;
+}
+body.light-mode [id$="-panel"] .notif-item { color: #334155 !important; }
+body.light-mode .role-banner-admin,
+body.light-mode .role-banner-analyst,
+body.light-mode .role-banner-viewer {
+    background: rgba(255,255,255,0.5) !important;
+}
 """
 
 

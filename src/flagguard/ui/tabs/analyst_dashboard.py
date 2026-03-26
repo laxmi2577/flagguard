@@ -10,7 +10,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
         # Header (notification bell + dark/light toggle built in)
         with gr.Row(elem_classes=["app-header"]):
             with gr.Column(scale=8):
-                header_html, logout_btn = create_shared_header("analyst", user_state)
+                header_html, logout_btn, theme_btn = create_shared_header("analyst", user_state)
 
         gr.HTML("<div class='role-banner-analyst'><b style='color:#f59e0b;'>🔬 You are an Analyst</b> — Create projects, run scans, manage environments, webhooks, reports, and IaC scans. User management requires Admin access.</div>")
 
