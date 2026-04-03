@@ -5,7 +5,9 @@ Bug fix: Mermaid code with braces was breaking Python f-string HTML templates.
 """
 
 import base64
+import hashlib
 import json
+import time as _time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -237,10 +239,40 @@ def save_history_entry(entry: dict):
     except Exception:
         pass
 
+# ── Analysis Cache ───────────────────────────────────────────────────────────
+_analysis_cache: dict = {}   # key: sha256 hex → {"result": ..., "ts": float}
+_CACHE_TTL = 600             # 10 minutes
+
+
+def _file_content_hash(file_obj) -> str:
+    """SHA256 of file bytes — used as cache key."""
+    try:
+        with open(file_obj.name, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        return ""
+
+
 def run_analysis(config_file, source_file, use_llm, progress=gr.Progress()):
-    """Core analysis logic — shared by all role dashboards."""
+    """Core analysis logic — shared by all role dashboards.
+
+    Results are cached by config-file SHA256 for up to 10 minutes so that
+    repeated runs on an identical manifest skip the expensive Z3 + LLM calls.
+    """
     if not config_file:
         return [0, 0, 0, 0, "0%", None, None, "No scan data.", "", ""]
+
+    # ── Cache check ──────────────────────────────────────────────────────
+    cache_key = _file_content_hash(config_file)
+    if cache_key and cache_key in _analysis_cache:
+        entry = _analysis_cache[cache_key]
+        age = _time.time() - entry["ts"]
+        if age < _CACHE_TTL:
+            print(f"[CACHE] HIT for config hash {cache_key[:12]}... (age {age:.0f}s)")
+            return entry["result"]
+        else:
+            del _analysis_cache[cache_key]
+            print(f"[CACHE] EXPIRED for {cache_key[:12]}... — re-analysing")
 
     try:
         progress(0.1, desc="Initializing...")
@@ -303,6 +335,17 @@ def run_analysis(config_file, source_file, use_llm, progress=gr.Progress()):
 
     except Exception as e:
         raise gr.Error(f"Analysis Error: {str(e)}")
+
+    finally:
+        # ── Cache store ──────────────────────────────────────────────────
+        if cache_key:
+            try:
+                result = (m_flags, m_conflicts, m_dependencies, m_enabled, m_health,
+                          fig1, fig2, report_md, iframe_html, mermaid_code)
+                _analysis_cache[cache_key] = {"result": result, "ts": _time.time()}
+                print(f"[CACHE] MISS — stored result for {cache_key[:12]}...")
+            except NameError:
+                pass  # analysis failed before producing results
 
 def format_conflicts_list(conflicts) -> str:
     if not conflicts:

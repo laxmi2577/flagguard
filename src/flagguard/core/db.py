@@ -18,12 +18,19 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 # SQLite needs specific connect args
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    # Echo SQL in dev mode for debugging
-    echo=os.getenv("DEBUG", "False").lower() == "true",
-)
+# Build engine kwargs based on database type
+_engine_kwargs = {
+    "connect_args": connect_args,
+    "pool_pre_ping": True,        # verify connection is alive before use
+    "pool_recycle": 300,          # recycle stale connections every 5 min
+    "echo": os.getenv("DEBUG", "False").lower() == "true",
+}
+# Full connection pooling only for production DBs (not SQLite)
+if not DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs["pool_size"] = 10
+    _engine_kwargs["max_overflow"] = 20
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -63,15 +70,32 @@ def get_db_session():
 
 
 def init_db() -> None:
-    """Create all tables on server start (auto-migration).
-    
-    Safe to call on every startup — SQLAlchemy only creates tables
-    that don't exist yet (CREATE TABLE IF NOT EXISTS).
-    Covers all models: User, Project, Environment, Scan, FlagDefinition,
-    WebhookConfig, AuditLog, PendingUser, Notification, etc.
+    """Create all tables and run lightweight migrations.
+
+    1. ``create_all()`` creates any *new* tables (e.g. ``project_members``).
+    2. A manual ``ALTER TABLE`` adds ``project_code`` to the existing
+       ``projects`` table if it is missing (SQLAlchemy's ``create_all``
+       does NOT add columns to tables that already exist).
+    3. Existing rows get their UUID prefix as a temporary project_code.
     """
-    import flagguard.core.models.tables  # Ensure all models are loaded into metadata
+    import flagguard.core.models.tables  # noqa — register all models
     Base.metadata.create_all(bind=engine)
+
+    # ── Migration: add project_code if missing ───────────────────────────
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("projects")]
+    if "project_code" not in columns:
+        print("[MIGRATION] Adding 'project_code' column to projects table...")
+        with engine.begin() as conn:
+            conn.execute(text(
+                "ALTER TABLE projects ADD COLUMN project_code TEXT"
+            ))
+            conn.execute(text(
+                "UPDATE projects SET project_code = UPPER(SUBSTR(id, 1, 8)) "
+                "WHERE project_code IS NULL"
+            ))
+        print("[MIGRATION] Done — existing projects backfilled with UUID prefix")
 
 
 # Auto-run migration when this module is imported (server startup)

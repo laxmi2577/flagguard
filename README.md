@@ -52,8 +52,13 @@ By applying constraint solving against your codebase AST (via `tree-sitter`), Fl
 ### 3. 🤖 Agentic AI Remediation (GraphRAG)
 FlagGuard doesn't just *explain* conflicts — it **fixes them**. A multi-agent system retrieves relevant source code via a **Hybrid Retriever** (ChromaDB semantic search + NetworkX call graph), generates a code patch via a **Coder Agent**, and mathematically verifies it through a **Z3 Verifier Agent** — all in an autonomous retry loop. See the [AI Intelligence Layer](#-ai-native-intelligence-layer-graphrag) below for the full architecture.
 
-### 4. 📊 Enterprise Dashboard & RBAC REST API
-FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" web UI built on Gradio, backed by a production-ready **FastAPI** backend featuring JWT Authentication, Role-Based Access Control, and SQLite/PostgreSQL persistence.
+### 4. 📊 Enterprise Dashboard & Full RBAC System
+FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" web UI built on Gradio, backed by a production-ready **FastAPI** backend featuring:
+- **JWT Authentication** with persistent session cookies
+- **Role-Based Access Control (RBAC):** Admin, Analyst, and Viewer roles with isolated dashboards
+- **Project Codes:** Every project has a mandatory human-readable `project_code` (e.g. `PROJ_1`) as its primary identifier
+- **Admin Project Assignment:** Admins can explicitly assign users to specific projects with `read` or `write` access levels via a dedicated management UI
+- **Data Isolation:** Users only see projects they own or have been assigned to — enforced via a `ProjectMember` bridge table
 
 ---
 
@@ -229,7 +234,6 @@ flowchart LR
 └───────────────────────────────┘  └───────────────────────────────┘
 ```
 
-```
 
 ---
 

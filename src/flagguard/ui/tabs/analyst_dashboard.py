@@ -40,7 +40,8 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         gr.HTML("<div class='sidebar-title'>Project</div>")
                         project_selector = gr.Dropdown(label="", choices=[], interactive=True)
                         with gr.Row():
-                            new_proj_name = gr.Textbox(label="New Project Name")
+                            new_proj_code = gr.Textbox(label="Project Code", placeholder="e.g. PROJ_1, P1")
+                            new_proj_name = gr.Textbox(label="Project Name", placeholder="e.g. My App v2")
                             create_proj_btn = gr.Button("+ Create", elem_classes=["glass-btn"], size="sm")
                         proj_msg = gr.Textbox(interactive=False, show_label=False)
                         gr.HTML("<div style='margin:12px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
@@ -64,20 +65,36 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                             with gr.TabItem("Report"):
                                 report_md = gr.Markdown("No scan data.")
 
-                def create_project(name, uid):
-                    if not name or not uid:
-                        return gr.update(), "Enter a project name."
+                def create_project(code, name, uid):
+                    if not code or not name or not uid:
+                        return gr.update(), "Both Project Code and Name are required."
+                    code = code.strip().upper()
                     try:
                         from flagguard.core.db import SessionLocal
-                        from flagguard.core.models.tables import Project
+                        from flagguard.core.models.tables import Project, ProjectMember
                         db = SessionLocal()
-                        p = Project(name=name, owner_id=uid, description="")
-                        db.add(p); db.commit(); db.refresh(p)
-                        # Reload analyst's own projects
-                        projs = db.query(Project).filter(Project.owner_id == uid)\
-                                  .order_by(Project.created_at.desc()).all()
-
-                        return gr.update(choices=[(p.name, p.id) for p in projs], value=p.id), f"Created: {name}"
+                        existing = db.query(Project).filter(Project.project_code == code).first()
+                        if existing:
+                            db.close()
+                            return gr.update(), f"Project code '{code}' already exists."
+                        p = Project(project_code=code, name=name, owner_id=uid, description="")
+                        db.add(p)
+                        db.flush()
+                        member = ProjectMember(user_id=uid, project_id=p.id, access_level="write", assigned_by=uid)
+                        db.add(member)
+                        db.commit()
+                        db.refresh(p)
+                        # Reload analyst's own projects + assigned ones
+                        own = db.query(Project).filter(Project.owner_id == uid).all()
+                        assigned_ids = [m.project_id for m in db.query(ProjectMember).filter(ProjectMember.user_id == uid).all()]
+                        assigned = db.query(Project).filter(Project.id.in_(assigned_ids)).all() if assigned_ids else []
+                        all_projs = {pr.id: pr for pr in own + assigned}
+                        choices = [
+                            (f"{pr.project_code or pr.id[:8]} \u2014 {pr.name}", pr.id)
+                            for pr in all_projs.values()
+                        ]
+                        db.close()
+                        return gr.update(choices=choices, value=p.id), f"\u2705 Created: {code} \u2014 {name}"
                     except Exception as e:
                         return gr.update(), f"Error: {e}"
 
@@ -90,16 +107,23 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                     h_h = f"<div class='metric-value'>{m_h}</div><div class='metric-label'>Health</div>"
                     return h_f, h_a, h_c, h_h, res[5], res[6], res[7], res[8], res[9]
 
-                create_proj_btn.click(create_project, inputs=[new_proj_name, user_state], outputs=[project_selector, proj_msg])
-                analyze_btn.click(run_and_update, inputs=[project_selector, file_input, source_input, use_llm],
-                    outputs=[val_flags, val_active, val_conflicts, val_health, plot_status, plot_severity, report_md, graph_html, mermaid_code_display])
+                create_proj_btn.click(create_project, inputs=[new_proj_code, new_proj_name, user_state], outputs=[project_selector, proj_msg])
+                analyze_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Analysing..."), outputs=[analyze_btn]
+                ).then(
+                    run_and_update, inputs=[project_selector, file_input, source_input, use_llm],
+                    outputs=[val_flags, val_active, val_conflicts, val_health, plot_status, plot_severity, report_md, graph_html, mermaid_code_display],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="\u26a1 Run Analysis"), outputs=[analyze_btn]
+                )
 
             # Tab 2: Environments
             with gr.TabItem("🌍 Environments"):
                 with gr.Group(elem_classes=["glass-card"]):
                     gr.HTML("<div class='sidebar-title'>Create Environment</div>")
                     with gr.Row():
-                        env_proj = gr.Textbox(label="Project ID", scale=2)
+                        env_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
                         env_name_inp = gr.Textbox(label="Name", placeholder="dev/staging/prod", scale=2)
                         env_btn = gr.Button("Create", elem_classes=["glass-btn"], scale=1)
                     env_overrides = gr.Textbox(label="Flag Overrides (JSON)", lines=3)
@@ -126,13 +150,13 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         except _json.JSONDecodeError:
                             return {"error": "❌ Flag Overrides must be valid JSON (e.g. {\"dark_mode\": true, \"beta\": false}). Leave empty for no overrides."}
                         db = SessionLocal()
-                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        proj = db.query(Project).filter(Project.id == pid).first()
                         if not proj:
                             return {"error": f"Project not found with ID '{pid.strip()}'. First create a project in the Analysis tab."}
-                        existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
+                        existing = db.query(Environment).filter(Environment.project_id == pid, Environment.name == name).first()
                         if existing:
                             return {"error": f"Environment '{name}' already exists for this project"}
-                        env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
+                        env = Environment(name=name, project_id=pid, flag_overrides=ovr)
                         db.add(env); db.commit(); db.refresh(env)
                         result = {"status": "✅ Created!", "id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
 
@@ -168,7 +192,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
             with gr.TabItem("🪝 Webhooks"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
-                        wh_proj = gr.Textbox(label="Project ID", scale=2)
+                        wh_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
                         wh_url = gr.Textbox(label="Webhook URL", scale=3)
                     wh_events = gr.CheckboxGroup(choices=["scan.completed","conflict.detected","flag.created","flag.updated"], value=["scan.completed","conflict.detected"], label="Events")
                     wh_btn = gr.Button("Create Webhook", elem_classes=["glass-btn"])
@@ -185,10 +209,10 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.db import SessionLocal
                         from flagguard.core.models.tables import WebhookConfig, Project
                         db = SessionLocal()
-                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        proj = db.query(Project).filter(Project.id == pid).first()
                         if not proj:
                             return {"error": "Project not found"}
-                        wh = WebhookConfig(project_id=pid.strip(), url=url, events=events or ["scan.completed"])
+                        wh = WebhookConfig(project_id=pid, url=url, events=events or ["scan.completed"])
                         db.add(wh); db.commit(); db.refresh(wh)
                         result = {"id": wh.id, "url": wh.url, "events": wh.events, "project_id": wh.project_id}
 
@@ -226,14 +250,14 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 with gr.Group(elem_classes=["glass-card"]):
                     gr.HTML("<div class='sidebar-title'>Schedule Recurring Scans</div>")
                     with gr.Row():
-                        sched_proj = gr.Textbox(label="Project ID", scale=2)
+                        sched_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
                         sched_interval = gr.Slider(label="Interval (min)", minimum=5, maximum=1440, value=60, scale=2)
                         sched_btn = gr.Button("Schedule", elem_classes=["glass-btn"], scale=1)
                     sched_result = gr.JSON(label="Schedule Status")
                     gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
                     gr.HTML("<div class='sidebar-title'>Conflict Trends</div>")
                     with gr.Row():
-                        trend_proj = gr.Textbox(label="Project ID", scale=2)
+                        trend_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
                         trend_days = gr.Slider(label="Days", minimum=7, maximum=90, value=30, scale=2)
                         trend_btn = gr.Button("Load", elem_classes=["glass-btn"], scale=1)
                     trend_result = gr.JSON(label="Trend Data")
@@ -245,7 +269,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                         from flagguard.core.db import SessionLocal
                         from flagguard.core.models.tables import Project
                         db = SessionLocal()
-                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        proj = db.query(Project).filter(Project.id == pid).first()
 
                         if not proj:
                             return {"error": "Project not found"}
@@ -281,12 +305,12 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
             with gr.TabItem("📑 Reports"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
-                        rep_proj = gr.Textbox(label="Project ID", scale=3)
+                        rep_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=3)
                         rep_fmt = gr.Dropdown(label="Format", choices=["json","csv","markdown"], value="json", scale=1)
                         rep_btn = gr.Button("Generate", elem_classes=["glass-btn"], scale=1)
                     rep_result = gr.JSON(label="Report")
                     gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
-                    exec_proj = gr.Textbox(label="Project ID (Executive Summary)")
+                    exec_proj = gr.Dropdown(label="Project (Executive Summary)", choices=[], interactive=True)
                     exec_btn = gr.Button("Executive Summary", elem_classes=["glass-btn"])
                     exec_result = gr.JSON(label="Summary")
 
@@ -369,7 +393,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
             with gr.TabItem("⏳ Lifecycle"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
-                        lc_proj = gr.Textbox(label="Project ID", scale=2)
+                        lc_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
                         lc_days = gr.Slider(label="Stale Days", minimum=7, maximum=180, value=30, scale=2)
                         lc_btn = gr.Button("Check", elem_classes=["glass-btn"], scale=1)
                     with gr.Row():
@@ -506,22 +530,41 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 load_profile_btn.click(load_profile, inputs=[user_state], outputs=[profile_info])
                 change_pw_btn.click(do_change_pw, inputs=[user_state, curr_pw, new_pw, new_pw2], outputs=[pw_msg])
 
-        def refresh_projects(uid):
-            if not uid:
-                return gr.update(choices=[])
+        def _analyst_project_choices(uid):
+            """Get projects this analyst has access to (owned + assigned via ProjectMember)."""
             try:
                 from flagguard.core.db import SessionLocal
-                from flagguard.core.models.tables import Project
+                from flagguard.core.models.tables import Project, ProjectMember
                 db = SessionLocal()
-                projs = db.query(Project).filter(Project.owner_id == uid)\
-                          .order_by(Project.created_at.desc()).all()
-
-                return gr.update(choices=[(p.name, p.id) for p in projs],
-                                 value=projs[0].id if projs else None)
+                # Projects they own
+                owned = db.query(Project).filter(Project.owner_id == uid).all()
+                # Projects assigned via RBAC
+                member_ids = [m.project_id for m in db.query(ProjectMember).filter(ProjectMember.user_id == uid).all()]
+                assigned = db.query(Project).filter(Project.id.in_(member_ids)).all() if member_ids else []
+                # Merge (deduplicate)
+                all_projs = {p.id: p for p in owned + assigned}
+                db.close()
+                return [
+                    (f"{p.project_code or p.id[:8]} \u2014 {p.name}", p.id)
+                    for p in all_projs.values()
+                ]
             except Exception:
-                return gr.update(choices=[])
+                return []
 
-        user_state.change(refresh_projects, inputs=[user_state], outputs=[project_selector])
+        def refresh_projects(uid):
+            if not uid:
+                empty = gr.update(choices=[])
+                return [empty] * 8  # project_selector + 7 secondary dropdowns
+            choices = _analyst_project_choices(uid)
+            default = choices[0][1] if choices else None
+            updates = [gr.update(choices=choices, value=default)]  # project_selector
+            updates += [gr.update(choices=choices) for _ in range(7)]  # 7 secondary dropdowns
+            return updates
+
+        user_state.change(
+            refresh_projects, inputs=[user_state],
+            outputs=[project_selector, env_proj, wh_proj, sched_proj, trend_proj, rep_proj, exec_proj, lc_proj]
+        )
 
     return dashboard, logout_btn
 

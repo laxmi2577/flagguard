@@ -16,8 +16,9 @@ def create_app():
     with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
 
         # ── Shared state ────────────────────────────────────────────────────
-        user_id   = gr.State("")
-        user_role = gr.State("viewer")
+        user_id       = gr.State("")
+        user_role     = gr.State("viewer")
+        session_token = gr.Textbox(visible=False, value="", elem_id="fg-session-token")
 
         # ════════════════════════════════════════════════════════════════════
         # LOGIN + SIGNUP VIEW
@@ -113,7 +114,7 @@ def create_app():
         def perform_login(email, password):
             from flagguard.core.db import SessionLocal
             from flagguard.core.models.tables import User
-            from flagguard.auth.utils import verify_password
+            from flagguard.auth.utils import verify_password, create_access_token
 
             def hide_all():
                 return (gr.update(visible=False), gr.update(visible=False), gr.update(visible=False))
@@ -123,7 +124,6 @@ def create_app():
                 user = db.query(User).filter(User.email == email).first()
 
                 if not user or not verify_password(password, user.hashed_password):
-                    # Check if pending
                     db2 = SessionLocal()
                     from flagguard.core.models.tables import PendingUser
                     pending = db2.query(PendingUser).filter(PendingUser.email == email).first()
@@ -134,38 +134,43 @@ def create_app():
                         msg = "<div style='color:#ef4444;text-align:center;padding:8px;'>❌ Your request was rejected. Contact admin.</div>"
                     else:
                         msg = "<div style='color:#ef4444;text-align:center;padding:8px;'>❌ Invalid email or password.</div>"
-                    return (gr.update(), "viewer", msg,
+                    return (gr.update(), "viewer", msg, "",
                             gr.update(), *hide_all())
 
                 if not user.is_active:
                     return (gr.update(), "viewer",
                             "<div style='color:#ef4444;text-align:center;padding:8px;'>❌ Account is deactivated. Contact admin.</div>",
-                            gr.update(), *hide_all())
+                            "", gr.update(), *hide_all())
 
                 role = getattr(user, "role", "viewer") or "viewer"
 
-                # Show the right dashboard
+                # Generate JWT token for persistent session cookie
+                token = create_access_token({"sub": user.id, "role": role})
+
                 show_viewer  = role == "viewer"
                 show_analyst = role == "analyst"
                 show_admin   = role == "admin"
 
                 return (
-                    user.id,  role, "",
-                    gr.update(visible=False),           # login_view
-                    gr.update(visible=show_viewer),     # viewer_dash
-                    gr.update(visible=show_analyst),    # analyst_dash
-                    gr.update(visible=show_admin),      # admin_dash
+                    user.id, role, "", token,
+                    gr.update(visible=False),
+                    gr.update(visible=show_viewer),
+                    gr.update(visible=show_analyst),
+                    gr.update(visible=show_admin),
                 )
             except Exception as e:
                 return (gr.update(), "viewer",
                         f"<div style='color:#ef4444;'>⚠️ Error: {e}</div>",
-                        gr.update(), *hide_all())
+                        "", gr.update(), *hide_all())
 
         login_btn.click(
             perform_login,
             inputs=[email_input, password_input],
-            outputs=[user_id, user_role, login_msg, login_view,
-                     viewer_dash, analyst_dash, admin_dash]
+            outputs=[user_id, user_role, login_msg, session_token,
+                     login_view, viewer_dash, analyst_dash, admin_dash]
+        ).then(
+            fn=None, inputs=[session_token],
+            js="(token) => { if(token) document.cookie='fg_session='+token+';path=/;max-age=3600;SameSite=Lax'; }"
         )
 
         # ── Signup Request ───────────────────────────────────────────────────
@@ -242,14 +247,68 @@ def create_app():
                     gr.update(visible=False))   # admin_dash
 
         for btn in [viewer_logout, analyst_logout, admin_logout]:
-            btn.click(do_logout, outputs=[user_id, user_role, login_view, viewer_dash, analyst_dash, admin_dash])
+            btn.click(do_logout, outputs=[user_id, user_role, login_view, viewer_dash, analyst_dash, admin_dash]).then(
+                fn=None,
+                js="() => { document.cookie='fg_session=;path=/;expires=Thu,01 Jan 1970 00:00:00 GMT'; }"
+            )
+
+        # ── Session Restore (survives page refresh via JWT cookie) ────────────
+        def _restore_session(request: gr.Request):
+            """Auto-restore user session from JWT cookie on page load."""
+            try:
+                cookie_val = request.cookies.get("fg_session", "")
+                print(f"[SESSION] Cookie present: {bool(cookie_val)}, length: {len(cookie_val)}")
+                if not cookie_val:
+                    print("[SESSION] No cookie found — showing login")
+                    return _no_session()
+
+                from flagguard.auth.utils import verify_token
+                payload = verify_token(cookie_val)
+                if not payload:
+                    print("[SESSION] Token verification FAILED — expired or invalid")
+                    return _no_session()
+
+                uid  = payload.get("sub", "")
+                role = payload.get("role", "viewer")
+                print(f"[SESSION] Token valid — uid={uid[:8]}..., role={role}")
+
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import User
+                db = SessionLocal()
+                user = db.query(User).filter(User.id == uid).first()
+                db.close()
+
+                if not user or not user.is_active:
+                    print("[SESSION] User not found or inactive")
+                    return _no_session()
+
+                print(f"[SESSION] ✅ Restored session for {user.email} ({role})")
+                return (
+                    user.id, role,
+                    gr.update(visible=False),
+                    gr.update(visible=(role == "viewer")),
+                    gr.update(visible=(role == "analyst")),
+                    gr.update(visible=(role == "admin")),
+                )
+            except Exception as e:
+                print(f"[SESSION] Exception: {e}")
+                return _no_session()
+
+        def _no_session():
+            """Default state — show login screen."""
+            return ("", "viewer",
+                    gr.update(visible=True),
+                    gr.update(visible=False), gr.update(visible=False), gr.update(visible=False))
+
+        app.load(
+            _restore_session,
+            outputs=[user_id, user_role, login_view, viewer_dash, analyst_dash, admin_dash]
+        )
 
     return app
 
 def launch():
     import os
-    import threading
-    import time
     import uvicorn
 
     # Guard against Windows cp1252 console encoding issue with emoji
@@ -258,22 +317,21 @@ def launch():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-    # ── Start FastAPI API server on port 8000 in background ──────────────
-    def run_api():
-        """Run the FastAPI API server (all REST endpoints)."""
-        from flagguard.api.server import app as api_app
-        uvicorn.run(api_app, host="0.0.0.0", port=8000, log_level="warning")
+    # Import the FastAPI API app
+    from flagguard.api.server import app as api_app
 
-    api_thread = threading.Thread(target=run_api, daemon=True, name="api-server")
-    api_thread.start()
-    print("[OK] API server starting on http://localhost:8000 ...")
-    time.sleep(1)  # Give API server a moment to bind
+    # Create the Gradio UI
+    gradio_app = create_app()
 
-    # ── Start Gradio UI on port 7860 ────────────────────────────────────
-    app = create_app()
-    print("[OK] Gradio UI starting on http://localhost:7860 ...")
-    app.launch(show_error=True, allowed_paths=["."])
+    # ── Mount Gradio onto FastAPI — SINGLE SERVER, SHARED COOKIES ────────
+    gr.mount_gradio_app(api_app, gradio_app, path="/")
+
+    print("[OK] FlagGuard starting on http://localhost:8000")
+    print("[OK] Dashboard \u2192 http://localhost:8000/")
+    print("[OK] API Docs  \u2192 http://localhost:8000/docs")
+
+    uvicorn.run(api_app, host="0.0.0.0", port=8000, log_level="info")
+
 
 if __name__ == "__main__":
     launch()
-

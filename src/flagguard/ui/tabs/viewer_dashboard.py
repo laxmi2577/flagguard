@@ -113,8 +113,8 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                         Cleanup actions require Analyst or Admin access.
                     </div>""")
                     with gr.Row():
-                        lc_proj = gr.Textbox(label="Project ID")
-                        lc_btn = gr.Button("Check Lifecycle", elem_classes=["glass-btn"])
+                        lc_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=2)
+                        lc_btn = gr.Button("Check Lifecycle", elem_classes=["glass-btn"], scale=1)
                     with gr.Row():
                         with gr.Column(scale=1):
                             with gr.Group(elem_classes=["metric-card"]):
@@ -137,7 +137,7 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                             from flagguard.core.db import SessionLocal
                             from flagguard.core.models.tables import Scan
                             db = SessionLocal()
-                            last_scan = db.query(Scan).filter(Scan.project_id == proj_id.strip()).order_by(Scan.created_at.desc()).first()
+                            last_scan = db.query(Scan).filter(Scan.project_id == proj_id).order_by(Scan.created_at.desc()).first()
 
                             if not last_scan or not last_scan.result_summary:
                                 return "-", "-", "-", "-", "No scans found for this project."
@@ -274,20 +274,37 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                     change_pw_btn.click(do_change_pw, inputs=[user_state, curr_pw, new_pw, new_pw2], outputs=[pw_msg])
 
         # ── handlers ────────────────────────────────────────────────────────
-        def refresh_projects(uid):
-            if not uid:
-                return gr.update(choices=[])
+        def _viewer_project_choices(uid):
+            """Get projects this viewer has access to (owned + assigned via ProjectMember)."""
             try:
                 from flagguard.core.db import SessionLocal
-                from flagguard.core.models.tables import Project
+                from flagguard.core.models.tables import Project, ProjectMember
                 db = SessionLocal()
-                projs = db.query(Project).filter(Project.owner_id == uid)\
-                          .order_by(Project.created_at.desc()).all()
-
-                return gr.update(choices=[(p.name, p.id) for p in projs],
-                                 value=projs[0].id if projs else None)
+                # Projects they own
+                owned = db.query(Project).filter(Project.owner_id == uid).all()
+                # Projects assigned via RBAC
+                member_ids = [m.project_id for m in db.query(ProjectMember).filter(ProjectMember.user_id == uid).all()]
+                assigned = db.query(Project).filter(Project.id.in_(member_ids)).all() if member_ids else []
+                # Merge (deduplicate)
+                all_projs = {p.id: p for p in owned + assigned}
+                db.close()
+                return [
+                    (f"{p.project_code or p.id[:8]} \u2014 {p.name}", p.id)
+                    for p in all_projs.values()
+                ]
             except Exception:
-                return gr.update(choices=[])
+                return []
+
+        def refresh_projects(uid):
+            if not uid:
+                empty = gr.update(choices=[])
+                return [empty, empty]  # project_selector + lc_proj
+            choices = _viewer_project_choices(uid)
+            default = choices[0][1] if choices else None
+            return [
+                gr.update(choices=choices, value=default),  # project_selector
+                gr.update(choices=choices),                  # lc_proj
+            ]
 
         def load_analytics(proj_id):
             """Populate analytics charts when a project is selected."""
@@ -357,8 +374,8 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
 
             return fig_status, fig_severity
 
-        user_state.change(refresh_projects, inputs=[user_state], outputs=[project_selector])
-        refresh_proj_btn.click(refresh_projects, inputs=[user_state], outputs=[project_selector])
+        user_state.change(refresh_projects, inputs=[user_state], outputs=[project_selector, lc_proj])
+        refresh_proj_btn.click(refresh_projects, inputs=[user_state], outputs=[project_selector, lc_proj])
         project_selector.change(load_analytics, inputs=[project_selector], outputs=[plot_status, plot_severity])
 
     return dashboard, logout_btn, plot_status, plot_severity, graph_html, mermaid_code_display, report_md, val_flags, val_active, val_conflicts, val_health

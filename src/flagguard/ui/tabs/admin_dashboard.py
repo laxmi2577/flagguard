@@ -17,7 +17,22 @@ def _load_project_choices():
         db = SessionLocal()
         projs = db.query(Project).order_by(Project.created_at.desc()).all()
         db.close()
-        return [(f"{p.name}  (ID: {p.id[:8]}...)", p.id) for p in projs]
+        return [
+            (f"{p.project_code or p.id[:8]} \u2014 {p.name}", p.id)
+            for p in projs
+        ]
+    except Exception:
+        return []
+
+def _load_env_choices():
+    """Load all environments as (label, id) tuples for dropdowns."""
+    try:
+        from flagguard.core.db import SessionLocal
+        from flagguard.core.models.tables import Environment
+        db = SessionLocal()
+        envs = db.query(Environment).order_by(Environment.created_at.desc()).all()
+        db.close()
+        return [(f"{e.name} (Proj: {e.project_id[:8]}...)", e.id) for e in envs]
     except Exception:
         return []
 
@@ -164,13 +179,34 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         deact_btn = gr.Button("Deactivate", elem_classes=["danger-btn glass-btn"], scale=1)
                     deact_msg = gr.Textbox(label="Status", interactive=False)
 
+                    # ── Project Access Assignment (RBAC) ─────────────────────
+                    gr.HTML("<div style='margin:16px 0;border-top:2px solid rgba(212,175,55,0.25);'></div>")
+                    gr.HTML("<div class='sidebar-title'>🔐 Project Access Assignment</div>")
+                    gr.HTML("""
+                    <div style='background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);
+                                border-radius:8px;padding:10px;margin-bottom:12px;font-size:0.85rem;color:#d4af37;'>
+                        Assign users to specific projects. Viewers get <b>Read</b> access, Analysts get <b>Write</b> access.
+                        Admins see all projects automatically.
+                    </div>""")
+                    with gr.Row():
+                        assign_user = gr.Dropdown(label="Select User", choices=[], interactive=True, scale=2)
+                        assign_proj = gr.Dropdown(label="Select Project", choices=[], interactive=True, scale=2)
+                        assign_level = gr.Dropdown(label="Access", choices=["read", "write"], value="read", scale=1)
+                        assign_btn = gr.Button("Assign", elem_classes=["glass-btn"], scale=1)
+                    assign_msg = gr.Textbox(label="Status", interactive=False)
+                    with gr.Row():
+                        assign_refresh_btn = gr.Button("Load Assignments", elem_classes=["glass-btn"], scale=2)
+                        remove_member_id = gr.Textbox(label="Member ID to Remove", scale=2)
+                        remove_btn = gr.Button("Remove Access", elem_classes=["danger-btn glass-btn"], scale=1)
+                    assignments_table = gr.JSON(label="Current Project Assignments")
+
                 def load_users(_):
                     try:
                         from flagguard.core.db import SessionLocal
                         from flagguard.core.models.tables import User
                         db = SessionLocal()
                         users = db.query(User).order_by(User.created_at.desc()).all()
-
+                        db.close()
                         return [{"id": u.id, "email": u.email, "name": u.full_name,
                                  "role": u.role, "active": u.is_active,
                                  "joined": str(u.created_at)[:10]} for u in users]
@@ -218,10 +254,124 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     except Exception as e:
                         return f"Error: {e}"
 
+                # ── RBAC backend functions ───────────────────────────────
+                def _load_user_choices():
+                    """Load non-admin users for assignment dropdown."""
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import User
+                        db = SessionLocal()
+                        users = db.query(User).filter(
+                            User.is_active == True, User.role != "admin"
+                        ).order_by(User.email).all()
+                        db.close()
+                        return [(f"{u.email} ({u.role})", u.id) for u in users]
+                    except Exception:
+                        return []
+
+                def refresh_assign_dropdowns():
+                    """Refresh both user and project dropdowns for assignment."""
+                    return (
+                        gr.update(choices=_load_user_choices()),
+                        gr.update(choices=_load_project_choices()),
+                    )
+
+                def assign_access(user_id, project_id, level, admin_uid):
+                    if not user_id or not project_id:
+                        return "Select both a User and a Project."
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import ProjectMember, User, Project
+                        db = SessionLocal()
+                        # Check for existing assignment
+                        existing = db.query(ProjectMember).filter(
+                            ProjectMember.user_id == user_id,
+                            ProjectMember.project_id == project_id,
+                        ).first()
+                        if existing:
+                            existing.access_level = level
+                            db.commit()
+                            db.close()
+                            return f"✅ Updated access to '{level}' for existing assignment."
+                        member = ProjectMember(
+                            user_id=user_id,
+                            project_id=project_id,
+                            access_level=level,
+                            assigned_by=admin_uid,
+                        )
+                        db.add(member)
+                        db.commit()
+                        # Fetch names for confirmation
+                        user = db.query(User).filter(User.id == user_id).first()
+                        proj = db.query(Project).filter(Project.id == project_id).first()
+                        # Send notification to the assigned user
+                        try:
+                            from flagguard.core.models.tables import Notification
+                            notif = Notification(
+                                user_id=user_id,
+                                title="Project Assigned",
+                                message=f"You have been granted '{level}' access to project {proj.project_code or proj.name}.",
+                                type="success",
+                            )
+                            db.add(notif)
+                            db.commit()
+                        except Exception:
+                            pass  # Don't break assignment if notification fails
+                        db.close()
+                        return f"✅ Assigned {user.email} → {proj.project_code or proj.name} ({level})"
+                    except Exception as e:
+                        return f"Error: {e}"
+
+                def load_assignments():
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import ProjectMember, User, Project
+                        db = SessionLocal()
+                        members = db.query(ProjectMember).all()
+                        result = []
+                        for m in members:
+                            user = db.query(User).filter(User.id == m.user_id).first()
+                            proj = db.query(Project).filter(Project.id == m.project_id).first()
+                            result.append({
+                                "member_id": m.id,
+                                "user": user.email if user else m.user_id,
+                                "user_role": user.role if user else "?",
+                                "project": f"{proj.project_code or '?'} — {proj.name}" if proj else m.project_id,
+                                "access": m.access_level,
+                                "assigned": str(m.assigned_at)[:16],
+                            })
+                        db.close()
+                        return result if result else [{"message": "No assignments yet"}]
+                    except Exception as e:
+                        return [{"error": str(e)}]
+
+                def remove_access(member_id):
+                    if not member_id:
+                        return "Enter a Member ID.", []
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import ProjectMember
+                        db = SessionLocal()
+                        m = db.query(ProjectMember).filter(ProjectMember.id == member_id.strip()).first()
+                        if not m:
+                            db.close()
+                            return "Member ID not found.", []
+                        db.delete(m)
+                        db.commit()
+                        db.close()
+                        return f"✅ Removed access (ID: {member_id.strip()[:8]}...)", load_assignments()
+                    except Exception as e:
+                        return f"Error: {e}", []
+
                 users_refresh_btn.click(load_users, inputs=[user_state], outputs=[users_table])
                 role_btn.click(change_role, inputs=[role_user_id, role_new], outputs=[role_msg])
                 reset_btn.click(reset_password, inputs=[reset_uid, reset_pw], outputs=[reset_msg])
                 deact_btn.click(deactivate_user, inputs=[deact_uid, user_state], outputs=[deact_msg])
+                # RBAC handlers
+                users_refresh_btn.click(refresh_assign_dropdowns, outputs=[assign_user, assign_proj])
+                assign_btn.click(assign_access, inputs=[assign_user, assign_proj, assign_level, user_state], outputs=[assign_msg])
+                assign_refresh_btn.click(load_assignments, outputs=[assignments_table])
+                remove_btn.click(remove_access, inputs=[remove_member_id], outputs=[assign_msg, assignments_table])
 
             # ─── Tab 3: Audit Log ─────────────────────────────────────────────
             with gr.TabItem("📋 Audit Log"):
@@ -548,7 +698,15 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         return "-", "-", {"error": str(e)}
 
                 cicd_refresh.click(lambda: gr.update(choices=_load_project_choices()), outputs=[cicd_proj])
-                cicd_btn.click(run_gate, inputs=[cicd_proj, cicd_threshold], outputs=[gate_status_html, gate_health_html, cicd_result])
+                cicd_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Checking..."), outputs=[cicd_btn]
+                ).then(
+                    run_gate, inputs=[cicd_proj, cicd_threshold],
+                    outputs=[gate_status_html, gate_health_html, cicd_result],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="Run Gate Check"), outputs=[cicd_btn]
+                )
 
             # ─── Tab 7: Analysis (Admin also runs scans) ──────────────────────
             with gr.TabItem("⚡ Analysis"):
@@ -557,6 +715,7 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         gr.HTML("<div class='sidebar-title'>All Projects</div>")
                         project_selector = gr.Dropdown(label="", choices=[], interactive=True)
                         with gr.Row():
+                            new_proj_code = gr.Textbox(label="Project Code", placeholder="e.g. PROJ_1, P1, 101")
                             new_proj_name = gr.Textbox(label="Project Name", placeholder="e.g. My App v2")
                             create_proj_btn = gr.Button("+ Create", elem_classes=["glass-btn"], size="sm")
                         proj_msg = gr.Textbox(interactive=False, show_label=False)
@@ -580,36 +739,80 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                             with gr.TabItem("Report"):
                                 report_md = gr.Markdown("No scan data.")
 
-                def create_project(name, uid):
-                    if not name:
-                        return gr.update(), "Enter a project name."
+                def create_project(code, name, uid):
+                    if not code or not name:
+                        return gr.update(), "Both Project Code and Name are required."
+                    code = code.strip().upper()  # always uppercase
                     try:
                         from flagguard.core.db import SessionLocal
-                        from flagguard.core.models.tables import Project
+                        from flagguard.core.models.tables import Project, ProjectMember
                         db = SessionLocal()
-                        # Admin creates project — uid is the owner
-                        p = Project(name=name, owner_id=uid, description="")
-                        db.add(p); db.commit(); db.refresh(p)
+                        # Check code uniqueness
+                        existing = db.query(Project).filter(Project.project_code == code).first()
+                        if existing:
+                            db.close()
+                            return gr.update(), f"Project code '{code}' already exists. Choose a unique code."
+                        p = Project(project_code=code, name=name, owner_id=uid, description="")
+                        db.add(p)
+                        db.flush()  # get p.id before creating member
+                        # Auto-assign creator as write member
+                        member = ProjectMember(user_id=uid, project_id=p.id, access_level="write", assigned_by=uid)
+                        db.add(member)
+                        db.commit()
+                        db.refresh(p)
                         # Reload ALL projects for admin
                         projs = db.query(Project).order_by(Project.created_at.desc()).all()
-
-                        choices = [(f"{pr.name} (owner: {pr.owner_id[:8]}...)", pr.id) for pr in projs]
-                        return gr.update(choices=choices, value=p.id), f"Created project: {name}"
+                        choices = [
+                            (f"{pr.project_code or pr.id[:8]} \u2014 {pr.name}", pr.id)
+                            for pr in projs
+                        ]
+                        db.close()
+                        return gr.update(choices=choices, value=p.id), f"\u2705 Created: {code} \u2014 {name}"
                     except Exception as e:
                         return gr.update(), f"Error: {e}"
 
                 def run_and_update(pid, config, source, use_ai):
                     res = run_analysis(config, source, use_ai)
                     m_f, m_c, m_d, m_e, m_h = res[0], res[1], res[2], res[3], res[4]
+
+                    # ── Persist scan to DB so CI/CD Gate, Reports, etc. can find it ──
+                    if pid:
+                        try:
+                            from flagguard.core.db import SessionLocal
+                            from flagguard.core.models.tables import Scan
+                            db = SessionLocal()
+                            health_int = int(m_h.replace('%', '')) if isinstance(m_h, str) else 0
+                            scan = Scan(
+                                project_id=pid,
+                                triggered_by='manual',
+                                status='completed',
+                                result_summary={
+                                    'flag_count': m_f,
+                                    'conflict_count': m_c + m_d,
+                                    'enabled_count': m_e,
+                                    'health_score': health_int,
+                                },
+                            )
+                            db.add(scan); db.commit()
+                        except Exception:
+                            pass  # Don't break analysis if DB save fails
+
                     h_f = f"<div class='metric-value'>{m_f}</div><div class='metric-label'>Flags</div>"
                     h_a = f"<div class='metric-value'>{m_e}</div><div class='metric-label'>Active</div>"
                     h_c = f"<div class='metric-value'>{m_c+m_d}</div><div class='metric-label'>Conflicts</div>"
                     h_h = f"<div class='metric-value'>{m_h}</div><div class='metric-label'>Health</div>"
                     return h_f, h_a, h_c, h_h, res[5], res[6], res[7], res[8], res[9]
 
-                create_proj_btn.click(create_project, inputs=[new_proj_name, user_state], outputs=[project_selector, proj_msg])
-                analyze_btn.click(run_and_update, inputs=[project_selector, file_input, source_input, use_llm],
-                    outputs=[val_flags, val_active, val_conflicts, val_health, plot_status, plot_severity, report_md, graph_html, mermaid_code])
+                create_proj_btn.click(create_project, inputs=[new_proj_code, new_proj_name, user_state], outputs=[project_selector, proj_msg])
+                analyze_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Analysing..."), outputs=[analyze_btn]
+                ).then(
+                    run_and_update, inputs=[project_selector, file_input, source_input, use_llm],
+                    outputs=[val_flags, val_active, val_conflicts, val_health, plot_status, plot_severity, report_md, graph_html, mermaid_code],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="\u26a1 Run Analysis"), outputs=[analyze_btn]
+                )
 
             # ─── Tab 8: Environments ──────────────────────────────────────────
             with gr.TabItem("🌍 Environments"):
@@ -622,39 +825,41 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                     env_overrides = gr.Textbox(label="Flag Overrides (JSON)", placeholder='{"dark_mode": true, "beta": false}', lines=3)
                     env_result = gr.JSON(label="Result")
                     gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                    gr.HTML("<div class='sidebar-title'>Compare Environment Drift</div>")
                     with gr.Row():
-                        drift_a = gr.Textbox(label="Env A ID", scale=1)
-                        drift_b = gr.Textbox(label="Env B ID", scale=1)
+                        drift_a = gr.Dropdown(label="Environment A", choices=_load_env_choices(), scale=1, interactive=True)
+                        drift_b = gr.Dropdown(label="Environment B", choices=_load_env_choices(), scale=1, interactive=True)
+                        drift_refresh = gr.Button("\U0001f504", elem_classes=["glass-btn"], scale=0, min_width=40)
                         drift_btn = gr.Button("Compare Drift", elem_classes=["glass-btn"], scale=1)
                     drift_result = gr.JSON(label="Drift Report")
 
                 def create_env(pid, name, overrides):
                     import json as _json
                     if not pid or not name:
-                        return {"error": "Project ID and Name required"}
+                        return {"error": "Project ID and Name required"}, gr.update(), gr.update()
                     try:
                         from flagguard.core.db import SessionLocal
                         from flagguard.core.models.tables import Environment, Project
                         try:
                             ovr = _json.loads(overrides) if overrides and overrides.strip() else {}
                             if not isinstance(ovr, dict):
-                                return {"error": "Flag Overrides must be a JSON object like {\"key\": true}"}
+                                return {"error": "Flag Overrides must be a JSON object like {\"key\": true}"}, gr.update(), gr.update()
                         except _json.JSONDecodeError:
-                            return {"error": "❌ Flag Overrides must be valid JSON (e.g. {\"dark_mode\": true, \"beta\": false}). Leave empty for no overrides."}
+                            return {"error": "❌ Flag Overrides must be valid JSON (e.g. {\"dark_mode\": true, \"beta\": false}). Leave empty for no overrides."}, gr.update(), gr.update()
                         db = SessionLocal()
                         proj = db.query(Project).filter(Project.id == pid.strip()).first()
                         if not proj:
-                            return {"error": f"Project not found with ID '{pid.strip()}'. First create a project in the Analysis tab."}
+                            return {"error": f"Project not found with ID '{pid.strip()}'. First create a project in the Analysis tab."}, gr.update(), gr.update()
                         existing = db.query(Environment).filter(Environment.project_id == pid.strip(), Environment.name == name).first()
                         if existing:
-                            return {"error": f"Environment '{name}' already exists for this project"}
+                            return {"error": f"Environment '{name}' already exists for this project"}, gr.update(), gr.update()
                         env = Environment(name=name, project_id=pid.strip(), flag_overrides=ovr)
                         db.add(env); db.commit(); db.refresh(env)
                         result = {"status": "✅ Created!", "id": env.id, "name": env.name, "project_id": env.project_id, "flag_overrides": env.flag_overrides}
 
-                        return result
+                        return result, gr.update(choices=_load_env_choices()), gr.update(choices=_load_env_choices())
                     except Exception as e:
-                        return {"error": str(e)}
+                        return {"error": str(e)}, gr.update(), gr.update()
 
                 def compare_drift(env_a_id, env_b_id):
                     if not env_a_id or not env_b_id:
@@ -678,7 +883,16 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
                         return {"error": str(e)}
 
                 env_refresh.click(lambda: gr.update(choices=_load_project_choices()), outputs=[env_proj])
-                env_btn.click(create_env, inputs=[env_proj, env_name_inp, env_overrides], outputs=[env_result])
+                env_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Creating..."), outputs=[env_btn]
+                ).then(
+                    create_env, inputs=[env_proj, env_name_inp, env_overrides],
+                    outputs=[env_result, drift_a, drift_b],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="Create"), outputs=[env_btn]
+                )
+                drift_refresh.click(lambda: (gr.update(choices=_load_env_choices()), gr.update(choices=_load_env_choices())), outputs=[drift_a, drift_b])
                 drift_btn.click(compare_drift, inputs=[drift_a, drift_b], outputs=[drift_result])
 
             # ─── Tab 9: Reports ───────────────────────────────────────────────
@@ -734,8 +948,22 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
 
                 rep_refresh.click(lambda: (gr.update(choices=_load_project_choices()), gr.update(choices=_load_project_choices())),
                                   outputs=[rep_proj, exec_proj])
-                rep_btn.click(gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result])
-                exec_btn.click(exec_summary, inputs=[exec_proj], outputs=[exec_result])
+                rep_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Generating..."), outputs=[rep_btn]
+                ).then(
+                    gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="Generate"), outputs=[rep_btn]
+                )
+                exec_btn.click(
+                    lambda: gr.update(interactive=False, value="\u23f3 Summarising..."), outputs=[exec_btn]
+                ).then(
+                    exec_summary, inputs=[exec_proj], outputs=[exec_result],
+                    concurrency_limit=1,
+                ).then(
+                    lambda: gr.update(interactive=True, value="Executive Summary"), outputs=[exec_btn]
+                )
 
             # ─── Tab 10: IaC Scan ─────────────────────────────────────────────
             with gr.TabItem("🏗️ IaC Scan"):
@@ -836,10 +1064,12 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
             proj_update = refresh_all_projects(uid)
             choices = _load_project_choices()
             dd = gr.update(choices=choices, value=choices[0][1] if choices else None)
-            return proj_update, dd, dd, dd, dd
+            env_choices = _load_env_choices()
+            dd_env = gr.update(choices=env_choices, value=env_choices[0][1] if env_choices else None)
+            return proj_update, dd, dd, dd, dd, dd_env, dd_env
 
         user_state.change(_refresh_all_dropdowns, inputs=[user_state],
-                          outputs=[project_selector, cicd_proj, env_proj, rep_proj, exec_proj])
+                          outputs=[project_selector, cicd_proj, env_proj, rep_proj, exec_proj, drift_a, drift_b])
 
     return dashboard, logout_btn
 

@@ -48,6 +48,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(String, primary_key=True, default=generate_uuid)
+    project_code = Column(String, unique=True, index=True, nullable=True)  # e.g. PROJ_1, P1
     name = Column(String, index=True, nullable=False)
     description = Column(String)
     owner_id = Column(String, ForeignKey("users.id"))
@@ -57,6 +58,26 @@ class Project(Base):
     scans = relationship("Scan", back_populates="project")
     environments = relationship("Environment", back_populates="project")
     webhooks = relationship("WebhookConfig", back_populates="project")
+    members = relationship("ProjectMember", back_populates="project")
+
+
+class ProjectMember(Base):
+    """Links Users to Projects with an access level (RBAC bridge).
+
+    access_level: 'read' (viewer) or 'write' (analyst/admin)
+    """
+    __tablename__ = "project_members"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    access_level = Column(String, default="read")  # "read" or "write"
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    assigned_by = Column(String, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    project = relationship("Project", back_populates="members")
+    assigner = relationship("User", foreign_keys=[assigned_by])
 
 
 class Scan(Base):

@@ -107,7 +107,7 @@ app.include_router(risk_router, prefix="/api/v1")
 
 
 # --- Health Check ---
-@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
 def health_check():
     """API health check."""
     return {
