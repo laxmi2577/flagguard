@@ -7,6 +7,7 @@
   <a href="#-ai-native-intelligence-layer-graphrag"><img src="https://img.shields.io/badge/🧠_GraphRAG-Agentic_AI-blueviolet?style=for-the-badge" alt="GraphRAG"/></a>
   <a href="#-system-design--architecture"><img src="https://img.shields.io/badge/🔬_Z3_SAT-Formal_Verification-blue?style=for-the-badge" alt="Z3"/></a>
   <a href="#-the-challenge-technical-debt-at-scale"><img src="https://img.shields.io/badge/🛡️_Zero-False_Positives-success?style=for-the-badge" alt="Zero FP"/></a>
+  <a href="#-global-compliance--legal"><img src="https://img.shields.io/badge/⚖️_GDPR_CCPA_PDPB-Compliant-gold?style=for-the-badge" alt="Compliance"/></a>
 </p>
 
 <p align="center">
@@ -311,7 +312,30 @@ Spin up the interactive Web UI and FastAPI backend to manage environments and vi
 # Start the web interface
 uv run python src/flagguard/ui/app.py
 ```
-*Login with `admin@example.com` / `Admin@123` at http://localhost:7860.*
+*Login with `admin@example.com` / `Admin@123` at http://localhost:8000.*
+
+---
+
+## ⚖️ Global Compliance & Legal
+
+FlagGuard is built to meet international data privacy regulations across all supported deployment regions:
+
+| Regulation | Region | Status | Key Features |
+|-----------|--------|--------|--------------|
+| **GDPR / DSGVO** | EU / EEA | ✅ Implemented | Cookie consent banner, Privacy Policy, Data Export (Art.15), Account Deletion (Art.17), Consent Logging (Art.7) |
+| **UK GDPR** | United Kingdom | ✅ Implemented | Post-Brexit aligned, Grievance Officer contact, DSAR workflow |
+| **CCPA** | California, USA | ✅ Implemented | "Do Not Sell" opt-out via Essential-Only cookie consent |
+| **PDPB / DPDPA** | India | ✅ Implemented | Grievance Officer: Laxmiranjan Sahu (`laxmiranjan444@gmail.com`), Data Principal rights |
+
+### Compliance Features
+- 🍪 **Cookie Consent Banner** — Accept All / Essential Only / Decline All with verifiable server-side logging
+- 📄 **Legal Document Center** — Privacy Policy, Terms of Service, Acceptable Use Policy, Accessibility Statement, AI Transparency Statement, Data Inventory (accessible from footer)
+- 📦 **Data Export (DSAR Art.15)** — Self-service JSON export of all personal data from user dashboard
+- 🗑️ **Account Deletion (Art.17)** — Soft-delete with admin review workflow
+- 🤖 **AI Transparency** — Full model disclosure for SAT-solver, GraphRAG, and LLM components
+- ♿ **Accessibility** — WCAG 2.2 AA compliant UI with keyboard navigation and reduced-motion support
+
+> **Legal docs location:** `docs/legal/` — `privacy_policy.md`, `terms_of_service.md`, `acceptable_use.md`, `accessibility_statement.md`, `ai_transparency.md`, `data_inventory.md`
 
 ---
 
@@ -319,8 +343,9 @@ uv run python src/flagguard/ui/app.py
 
 FlagGuard is actively developed with a focus on enterprise scalability:
 
+- **[Done] Global Compliance:** GDPR, CCPA, UK GDPR, and PDPB/DPDPA compliant cookie consent, DSAR workflow, and legal document center.
 - **[In Progress] Global Language Expansion:** High-performance AST parsing for Go, Java, and Ruby codebases.
-- **[Planned] Enterprise Identiy:** SAML SSO integration and advanced Audit Logging retention.
+- **[Planned] Enterprise Identity:** SAML SSO integration and advanced Audit Logging retention.
 - **[Planned] Developer Experience:** Official VS Code Extension for real-time mathematical conflict highlighting in IDE.
 - **[Planned] Security Integrations:** SARIF output formats for direct ingestion into GitHub Advanced Security.
 

@@ -5,6 +5,7 @@ role-specific dashboard (viewer / analyst / admin).
 """
 
 import gradio as gr
+
 from flagguard.ui.styles import LIQUID_GLASS_CSS, get_theme
 from flagguard.ui.tabs.viewer_dashboard  import create_viewer_dashboard
 from flagguard.ui.tabs.analyst_dashboard import create_analyst_dashboard
@@ -13,8 +14,15 @@ from flagguard.ui.tabs.admin_dashboard   import create_admin_dashboard
 def create_app():
     theme = get_theme()
 
-    with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
+    # ══════════════════════════════════════════════════════════════════════
+    # Cookie consent + legal reader modals are handled by:
+    #   1. /src/flagguard/static/fg-modals.js (creates overlays on body)
+    #   2. ScriptInjectionMiddleware in server.py (injects <script> tag)
+    #   3. /api/v1/legal/{key} endpoint (serves legal docs as HTML)
+    # This completely bypasses Gradio's DOMPurify sanitization.
+    # ══════════════════════════════════════════════════════════════════════
 
+    with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
         # ── Shared state ────────────────────────────────────────────────────
         user_id       = gr.State("")
         user_role     = gr.State("viewer")
@@ -304,6 +312,26 @@ def create_app():
             _restore_session,
             outputs=[user_id, user_role, login_view, viewer_dash, analyst_dash, admin_dash]
         )
+
+        # ════════════════════════════════════════════════════════════════════
+        # GLOBAL LEGAL FOOTER (WCAG 2.2 compliant contrast)
+        # Footer links use data-legal attributes — event handling is in
+        # fg-modals.js which is injected by ScriptInjectionMiddleware.
+        # ════════════════════════════════════════════════════════════════════
+        gr.HTML("""
+        <footer style='text-align:center; padding:20px 20px 16px; font-size:0.8rem; color:#94a3b8; border-top:1px solid #334155; margin-top:40px; width:100%;' role="contentinfo" aria-label="Global Legal Footer">
+            <div style='display:flex; justify-content:center; gap:16px; margin-bottom:8px; flex-wrap:wrap;'>
+                <a href="#" data-legal="privacy" style='color:#cbd5e1; text-decoration:none;' aria-label="Privacy Policy">Privacy Policy</a>
+                <a href="#" data-legal="terms" style='color:#cbd5e1; text-decoration:none;' aria-label="Terms of Service">Terms of Service</a>
+                <a href="#" data-legal="aup" style='color:#cbd5e1; text-decoration:none;' aria-label="Acceptable Use Policy">Acceptable Use</a>
+                <a href="#" data-legal="accessibility" style='color:#cbd5e1; text-decoration:none;' aria-label="Accessibility Statement">Accessibility</a>
+                <a href="#" data-legal="ai" style='color:#cbd5e1; text-decoration:none;' aria-label="AI Transparency">AI Transparency</a>
+                <a href="#" data-legal="data" style='color:#cbd5e1; text-decoration:none;' aria-label="Data Inventory">Data Inventory</a>
+            </div>
+            <div style='margin-bottom:6px;'>&copy; 2026 FlagGuard Enterprise Intelligence. Built for SOC2/ISO27001 Environments.</div>
+            <div style='font-size:0.7rem; color:#64748b;'>Grievance Officer: Laxmiranjan Sahu &middot; <a href="mailto:laxmiranjan444@gmail.com" style="color:#94a3b8;">laxmiranjan444@gmail.com</a></div>
+        </footer>
+        """)
 
     return app
 
