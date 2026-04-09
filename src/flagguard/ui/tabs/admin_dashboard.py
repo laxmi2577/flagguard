@@ -1071,5 +1071,125 @@ def create_admin_dashboard(app: gr.Blocks, user_state: gr.State):
         user_state.change(_refresh_all_dropdowns, inputs=[user_state],
                           outputs=[project_selector, cicd_proj, env_proj, rep_proj, exec_proj, drift_a, drift_b])
 
+        # ════════════════════════════════════════════════════════════════════
+        # DSAR: Data Rights + Admin Deletion Requests
+        # ════════════════════════════════════════════════════════════════════
+        gr.HTML("<div style='margin:30px 0 10px;'></div>")
+        with gr.Group(elem_classes=["glass-card"]):
+            gr.HTML("""
+            <div style='margin-bottom:16px;'>
+                <div class='sidebar-title'>🔐 Data Rights & DSAR Management</div>
+                <p style='color:#94a3b8; font-size:0.85rem; margin:0;'>
+                    GDPR Art.15-17 / CCPA / India DPDP Act — Manage your own data and review user deletion requests.
+                </p>
+            </div>
+            """)
+            # Admin's own data rights
+            with gr.Row():
+                adm_export_btn = gr.Button("📥 Export My Data", elem_classes=["glass-btn"], size="sm")
+                adm_delete_btn = gr.Button("🗑️ Request Account Deletion", elem_classes=["danger-btn"], size="sm")
+            adm_dsar_output = gr.JSON(label="Your Data Export", visible=False)
+            adm_dsar_msg = gr.HTML("")
+
+            # Admin: Deletion request management
+            gr.HTML("<hr style='border:none; border-top:1px solid rgba(212,175,55,0.1); margin:20px 0;'/>")
+            gr.HTML("<div class='sidebar-title'>⚖️ Pending Deletion Requests (Admin Review)</div>")
+            adm_del_refresh = gr.Button("↻ Refresh Requests", elem_classes=["glass-btn"], size="sm")
+            adm_del_table = gr.JSON(label="Pending Deletion Requests")
+            with gr.Row():
+                adm_del_id = gr.Textbox(label="Request ID", placeholder="Paste request ID to approve/reject", scale=3)
+                adm_del_approve = gr.Button("✅ Approve", elem_classes=["success-btn"], size="sm", scale=1)
+                adm_del_reject = gr.Button("❌ Reject", elem_classes=["danger-btn"], size="sm", scale=1)
+            adm_del_msg = gr.HTML("")
+
+        def adm_export_my_data(uid):
+            if not uid:
+                return gr.update(visible=False), "<div style='color:#ef4444;'>Not logged in.</div>"
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import User, Project, AuditLog, ProjectMember
+                db = SessionLocal()
+                user = db.query(User).filter(User.id == uid).first()
+                if not user:
+                    return gr.update(visible=False), "<div style='color:#ef4444;'>User not found.</div>"
+                projects = db.query(Project).filter(Project.owner_id == uid).all()
+                memberships = db.query(ProjectMember).filter(ProjectMember.user_id == uid).all()
+                audit_count = db.query(AuditLog).filter(AuditLog.user_id == uid).count()
+                db.close()
+                export = {
+                    "export_date": str(__import__("datetime").datetime.utcnow()),
+                    "user": {"email": user.email, "full_name": user.full_name, "role": user.role, "created_at": str(user.created_at)},
+                    "projects_owned": [{"id": p.id, "code": p.project_code, "name": p.name} for p in projects],
+                    "project_memberships": [{"project_id": m.project_id, "access": m.access_level} for m in memberships],
+                    "audit_entries": audit_count,
+                }
+                return gr.update(visible=True, value=export), "<div style='color:#30d158;'>✅ Data exported.</div>"
+            except Exception as e:
+                return gr.update(visible=False), f"<div style='color:#ef4444;'>Error: {e}</div>"
+
+        def adm_request_deletion(uid):
+            if not uid:
+                return "<div style='color:#ef4444;'>Not logged in.</div>"
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import DeletionRequest
+                db = SessionLocal()
+                existing = db.query(DeletionRequest).filter(DeletionRequest.user_id == uid, DeletionRequest.status == "pending").first()
+                if existing:
+                    return "<div style='color:#f59e0b;'>⏳ Pending request already exists.</div>"
+                db.add(DeletionRequest(user_id=uid, reason="Admin self-deletion via DSAR"))
+                db.commit(); db.close()
+                return "<div style='color:#f59e0b;'>⏳ Deletion request submitted.</div>"
+            except Exception as e:
+                return f"<div style='color:#ef4444;'>Error: {e}</div>"
+
+        def load_deletion_requests():
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import DeletionRequest, User
+                db = SessionLocal()
+                reqs = db.query(DeletionRequest).filter(DeletionRequest.status == "pending").all()
+                user_map = {u.id: u.email for u in db.query(User).all()}
+                data = [{"id": r.id, "user": user_map.get(r.user_id, r.user_id[:8]),
+                         "reason": r.reason, "requested": str(r.requested_at)} for r in reqs]
+                db.close()
+                return data
+            except Exception:
+                return []
+
+        def handle_deletion(req_id, action, admin_uid):
+            if not req_id:
+                return "<div style='color:#ef4444;'>Please enter a Request ID.</div>", []
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import DeletionRequest, User, AuditLog
+                from datetime import datetime as dt
+                db = SessionLocal()
+                req = db.query(DeletionRequest).filter(DeletionRequest.id == req_id).first()
+                if not req:
+                    return "<div style='color:#ef4444;'>Request not found.</div>", load_deletion_requests()
+                req.status = action
+                req.reviewed_at = dt.utcnow()
+                req.reviewed_by = admin_uid
+                if action == "approved":
+                    # Soft-delete: deactivate user account
+                    user = db.query(User).filter(User.id == req.user_id).first()
+                    if user:
+                        user.is_active = False
+                    # Log the action
+                    db.add(AuditLog(user_id=admin_uid, action="delete_user", resource_type="user",
+                                    resource_id=req.user_id, details={"reason": "DSAR deletion approved"}))
+                db.commit(); db.close()
+                status_icon = "✅" if action == "approved" else "❌"
+                return f"<div style='color:#30d158;'>{status_icon} Request {action}.</div>", load_deletion_requests()
+            except Exception as e:
+                return f"<div style='color:#ef4444;'>Error: {e}</div>", load_deletion_requests()
+
+        adm_export_btn.click(adm_export_my_data, inputs=[user_state], outputs=[adm_dsar_output, adm_dsar_msg])
+        adm_delete_btn.click(adm_request_deletion, inputs=[user_state], outputs=[adm_dsar_msg])
+        adm_del_refresh.click(load_deletion_requests, outputs=[adm_del_table])
+        adm_del_approve.click(lambda rid, uid: handle_deletion(rid, "approved", uid), inputs=[adm_del_id, user_state], outputs=[adm_del_msg, adm_del_table])
+        adm_del_reject.click(lambda rid, uid: handle_deletion(rid, "rejected", uid), inputs=[adm_del_id, user_state], outputs=[adm_del_msg, adm_del_table])
+
     return dashboard, logout_btn
 

@@ -377,6 +377,44 @@ body.light-mode .role-banner-analyst,
 body.light-mode .role-banner-viewer {
     background: rgba(255,255,255,0.5) !important;
 }
+
+/* === WCAG 2.2 AA: Reduced Motion Support === */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* === WCAG 2.2 AA: Keyboard Focus Visibility === */
+*:focus-visible {
+    outline: 2px solid var(--gold-primary) !important;
+    outline-offset: 2px !important;
+    border-radius: 4px;
+}
+
+/* Remove focus outline for mouse users */
+*:focus:not(:focus-visible) {
+    outline: none !important;
+}
+
+/* === Skip to Main Content (Accessibility) === */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--gold-primary);
+    color: #000;
+    padding: 8px;
+    z-index: 100;
+    transition: top 0.2s;
+}
+.skip-link:focus {
+    top: 0;
+}
+
 """
 
 

@@ -254,3 +254,43 @@ class LLMFeedback(Base):
 
     user = relationship("User", backref="feedback")
 
+
+# --- GDPR Consent Logging ---
+
+class ConsentLog(Base):
+    """Stores verifiable proof of user cookie consent (GDPR Art.7).
+
+    Each row is an immutable record that a user explicitly accepted,
+    rejected, or customized their cookie preferences at a specific time.
+    """
+    __tablename__ = "consent_logs"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_ip = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    consent_type = Column(String, nullable=False)   # "accepted", "rejected", "essential"
+    consent_version = Column(String, default="1.0")  # Policy version at time of consent
+    granted_at = Column(DateTime, default=datetime.utcnow)
+
+
+# --- DSAR Account Deletion Requests ---
+
+class DeletionRequest(Base):
+    """Tracks GDPR/CCPA Right to Erasure requests (soft-delete with admin review).
+
+    Users can request account deletion from their Profile tab.
+    Admins review and approve/reject via the Admin dashboard.
+    """
+    __tablename__ = "deletion_requests"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    reason = Column(Text, default="")
+    status = Column(String, default="pending")  # pending, approved, rejected
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(String, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+

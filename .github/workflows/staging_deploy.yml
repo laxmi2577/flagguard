@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - pre-release
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync
+          
+      - name: Run Staging Tests
+        run: |
+          pytest tests/ --cov=src/flagguard --cov-fail-under=70
+          
+      - name: Deploy to Staging Environment
+        env:
+          STAGING_API_KEY: ${{ secrets.STAGING_API_KEY }}
+        run: |
+          echo "Deploying to Staging infrastructure..."
+          # Insert actual deployment script (e.g. huggingface-cli upload, or docker push)
+          echo "Deployment successful."

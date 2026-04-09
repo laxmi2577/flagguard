@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Security Audit
 
 on:
@@ -23,12 +24,16 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install bandit
+          pip install bandit semgrep
       
       - name: Run Bandit (Python security linter)
         run: |
           bandit -r src/ -f json -o bandit-report.json || true
           bandit -r src/ -ll || true
+          
+      - name: Run Semgrep (SAST)
+        run: |
+          semgrep scan --config auto --error
       
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4

@@ -378,5 +378,94 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
         refresh_proj_btn.click(refresh_projects, inputs=[user_state], outputs=[project_selector, lc_proj])
         project_selector.change(load_analytics, inputs=[project_selector], outputs=[plot_status, plot_severity])
 
+        # ════════════════════════════════════════════════════════════════════
+        # DSAR: Data Rights (GDPR Art.15-17, CCPA, DPDP Act)
+        # ════════════════════════════════════════════════════════════════════
+        gr.HTML("<div style='margin:30px 0 10px;'></div>")
+        with gr.Group(elem_classes=["glass-card"]):
+            gr.HTML("""
+            <div style='margin-bottom:16px;'>
+                <div class='sidebar-title'>🔐 Your Data Rights</div>
+                <p style='color:#94a3b8; font-size:0.85rem; margin:0;'>
+                    GDPR Art.15-17 / CCPA / India DPDP Act — You have the right to access, export, and request deletion of your personal data.
+                </p>
+            </div>
+            """)
+            with gr.Row():
+                export_btn = gr.Button("📥 Export My Data", elem_classes=["glass-btn"], size="sm")
+                delete_btn = gr.Button("🗑️ Request Account Deletion", elem_classes=["danger-btn"], size="sm")
+            dsar_output = gr.JSON(label="Your Data Export", visible=False)
+            dsar_msg = gr.HTML("")
+
+        def export_my_data(uid):
+            if not uid:
+                return gr.update(visible=False), "<div style='color:#ef4444;'>Not logged in.</div>"
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import User, Project, Scan, AuditLog, Notification, ProjectMember
+                db = SessionLocal()
+                user = db.query(User).filter(User.id == uid).first()
+                if not user:
+                    return gr.update(visible=False), "<div style='color:#ef4444;'>User not found.</div>"
+
+                # Collect all user data
+                projects = db.query(Project).filter(Project.owner_id == uid).all()
+                memberships = db.query(ProjectMember).filter(ProjectMember.user_id == uid).all()
+                scans_data = []
+                for p in projects:
+                    scans = db.query(Scan).filter(Scan.project_id == p.id).all()
+                    scans_data.extend([{"id": s.id, "project": p.name, "status": s.status, "created": str(s.created_at)} for s in scans])
+                audit = db.query(AuditLog).filter(AuditLog.user_id == uid).order_by(AuditLog.created_at.desc()).limit(100).all()
+                notifs = db.query(Notification).filter(Notification.user_id == uid).all()
+                db.close()
+
+                export = {
+                    "export_date": str(__import__("datetime").datetime.utcnow()),
+                    "user": {
+                        "email": user.email,
+                        "full_name": user.full_name,
+                        "role": user.role,
+                        "created_at": str(user.created_at),
+                        "is_active": user.is_active,
+                    },
+                    "projects_owned": [{"id": p.id, "code": p.project_code, "name": p.name} for p in projects],
+                    "project_memberships": [{"project_id": m.project_id, "access": m.access_level} for m in memberships],
+                    "scans": scans_data,
+                    "audit_log_entries": len(audit),
+                    "notifications": [{"title": n.title, "type": n.type, "created": str(n.created_at)} for n in notifs],
+                }
+                return gr.update(visible=True, value=export), "<div style='color:#30d158;'>✅ Data exported successfully. Copy the JSON above.</div>"
+            except Exception as e:
+                return gr.update(visible=False), f"<div style='color:#ef4444;'>Error: {e}</div>"
+
+        def request_deletion(uid):
+            if not uid:
+                return "<div style='color:#ef4444;'>Not logged in.</div>"
+            try:
+                from flagguard.core.db import SessionLocal
+                from flagguard.core.models.tables import DeletionRequest, User
+                db = SessionLocal()
+                user = db.query(User).filter(User.id == uid).first()
+                if not user:
+                    return "<div style='color:#ef4444;'>User not found.</div>"
+                # Check existing pending request
+                existing = db.query(DeletionRequest).filter(DeletionRequest.user_id == uid, DeletionRequest.status == "pending").first()
+                if existing:
+                    return "<div style='color:#f59e0b;'>⏳ You already have a pending deletion request. An admin will review it shortly.</div>"
+                req = DeletionRequest(user_id=uid, reason="User-initiated via DSAR portal")
+                db.add(req)
+                db.commit()
+                db.close()
+                return """<div style='background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);
+                                     border-radius:8px; padding:12px; text-align:center; color:#f59e0b;'>
+                    ⏳ Deletion request submitted.<br/>
+                    <small>An admin will review your request. Your account will remain active until approved.</small>
+                </div>"""
+            except Exception as e:
+                return f"<div style='color:#ef4444;'>Error: {e}</div>"
+
+        export_btn.click(export_my_data, inputs=[user_state], outputs=[dsar_output, dsar_msg])
+        delete_btn.click(request_deletion, inputs=[user_state], outputs=[dsar_msg])
+
     return dashboard, logout_btn, plot_status, plot_severity, graph_html, mermaid_code_display, report_md, val_flags, val_active, val_conflicts, val_health
 
