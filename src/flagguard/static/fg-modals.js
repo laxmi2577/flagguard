@@ -68,7 +68,9 @@
             '[data-legal]{cursor:pointer;transition:color .2s}' +
             '[data-legal]:hover{color:#d4af37!important}' +
             '[data-consent]{transition:all .2s}' +
-            '[data-consent]:hover{filter:brightness(1.3);transform:scale(1.02)}';
+            '[data-consent]:hover{filter:brightness(1.3);transform:scale(1.02)}' +
+            '[data-help]{cursor:pointer;transition:all .2s;text-decoration:none}' +
+            '[data-help]:hover{filter:brightness(1.2);transform:scale(1.03)}';
         document.head.appendChild(style);
 
         // Show cookie consent if not yet given
@@ -117,6 +119,31 @@
                     .then(function(r) { return r.text(); })
                     .then(function(h) { content.innerHTML = h; })
                     .catch(function() { content.innerHTML = '<p style="color:#ef4444;">Failed to load document.</p>'; });
+            }
+            e.preventDefault();
+            return;
+        }
+
+        // "How To Use" help guide buttons
+        var helpLink = t.closest ? t.closest('[data-help]') : null;
+        if (helpLink) {
+            var role = helpLink.getAttribute('data-help');
+            var helpTitles = {
+                viewer: '👁 Viewer Dashboard — How To Use',
+                analyst: '🔬 Analyst Dashboard — How To Use',
+                admin: '👑 Admin Dashboard — How To Use'
+            };
+            var overlay = document.getElementById('fg-legal-overlay');
+            var content = document.getElementById('fg-legal-content');
+            var title = document.getElementById('fg-legal-title');
+            if (overlay && content && title) {
+                title.textContent = helpTitles[role] || 'How To Use';
+                content.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:40px;">Loading guide...</p>';
+                overlay.style.display = 'block';
+                fetch('/api/v1/help/' + role)
+                    .then(function(r) { return r.text(); })
+                    .then(function(h) { content.innerHTML = h; })
+                    .catch(function() { content.innerHTML = '<p style="color:#ef4444;">Failed to load guide.</p>'; });
             }
             e.preventDefault();
             return;

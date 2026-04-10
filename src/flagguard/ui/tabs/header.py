@@ -117,6 +117,9 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
         <!-- Role Badge -->
         <span class='{badge_class}'>{role_label}</span>
 
+        <!-- How To Use Button -->
+        <a href='#' data-help='{role}' style='display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-family:Outfit,sans-serif;font-weight:600;font-size:0.78rem;text-decoration:none;cursor:pointer;' title='How to use this dashboard'>&#10067; How To Use</a>
+
     </div>
 
     <!-- Inject JS once -->

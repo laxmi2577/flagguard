@@ -238,6 +238,30 @@ async def get_legal_doc(doc_key: str):
     except FileNotFoundError:
         return JSONResponse(status_code=404, content={"error": f"File not found: {filename}.md"})
 
+# --- Help Guide Serving ---
+_HELP_DOCS = {
+    "viewer": "viewer_guide",
+    "analyst": "analyst_guide",
+    "admin": "admin_guide",
+}
+
+@app.get("/api/v1/help/{role}")
+async def get_help_doc(role: str):
+    """Serve role-specific help guide as HTML for the modal reader."""
+    filename = _HELP_DOCS.get(role)
+    if not filename:
+        return JSONResponse(status_code=404, content={"error": "Guide not found"})
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    path = os.path.join(project_root, "docs", "help", f"{filename}.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            md = f.read()
+        html = _md_to_html(md)
+        from starlette.responses import HTMLResponse
+        return HTMLResponse(content=html)
+    except FileNotFoundError:
+        return JSONResponse(status_code=404, content={"error": "Guide file not found"})
+
 # --- Mount Routers ---
 from flagguard.api.auth import router as auth_router
 from flagguard.api.projects import router as projects_router
