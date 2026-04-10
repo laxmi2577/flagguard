@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    environment: staging
     
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +31,7 @@ jobs:
           pytest tests/ --cov=src/flagguard --cov-fail-under=70
           
       - name: Deploy to Staging Environment
-        env:
-          STAGING_API_KEY: ${{ secrets.STAGING_API_KEY }}
         run: |
           echo "Deploying to Staging infrastructure..."
-          # Insert actual deployment script (e.g. huggingface-cli upload, or docker push)
+          # Insert actual deployment script when staging is configured
           echo "Deployment successful."
