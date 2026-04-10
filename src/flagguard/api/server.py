@@ -5,6 +5,9 @@ Run: uvicorn flagguard.api.server:app --port 8000
 """
 
 import os
+import logging
+
+logger = logging.getLogger("flagguard.api")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -180,7 +183,8 @@ async def log_consent(body: ConsentRequest, request: Request):
         db.close()
         return {"status": "ok", "consent": body.type}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        logger.error(f"Consent logging failed: {e}")
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # --- Legal Document Serving ---
 import re as _re
@@ -290,7 +294,8 @@ def api_health():
         db.close()
         db_status = "connected"
     except Exception as e:
-        db_status = f"error: {e}"
+        logger.error(f"Health check DB error: {e}")
+        db_status = "error"
 
     return {
         "status": "operational" if db_status == "connected" else "degraded",

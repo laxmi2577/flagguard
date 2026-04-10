@@ -10,6 +10,8 @@ on:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     environment: staging
     
     steps:
