@@ -1,55 +1,58 @@
 # 👁 Viewer Dashboard — How To Use
 
-Welcome to FlagGuard! As a **Viewer**, you have read-only access to monitor feature flag health across your projects.
+Welcome to FlagGuard! As a **Viewer**, you have read-only access to monitor feature flag health across your assigned projects.
 
 ---
 
-## 📋 Scan History
+## 1. 📋 Scan History
 View all past scans for your selected project.
 - **How:** Select a project from the dropdown → Click "Load Scan History"
 - **What you see:** Scan ID, status (passed/failed), health score, flag count, and date
 - **Tip:** Use this to track how flag health changes over time
 
-## 📊 Flag Charts
+## 2. 📊 Analytics
 Visual charts showing your feature flag distribution.
-- **Status Chart:** Shows how many flags are active, stale, or disabled
+- **Status Chart:** Shows how many flags are active, stale, or disabled (pie chart)
 - **Severity Chart:** Shows critical vs. warning vs. info flag issues
-- **How:** Select a project → charts auto-load
+- **How:** Select a project → charts auto-load after a scan
 
-## 🕸 Dependency Graph
+## 3. 📄 Report
+Download a full analysis report for your project.
+- **How:** Select a project → Click "Generate Report"
+- **Format:** Markdown with conflict details, health metrics, and recommendations
+
+## 4. 🕸 Dependency Graph
 Interactive visualization of how your flags depend on each other.
 - **How:** Select a project → click "Load Graph"
 - **What to look for:** Circular dependencies (red lines) = potential conflicts
 - **Tip:** Flags with many connections are high-risk — report them to your analyst
 
-## 📄 Markdown Report
-Download a full analysis report for your project.
-- **How:** Select a project → Click "Generate Report"
-- **Format:** Markdown with conflict details, health metrics, and recommendations
-
-## 🔄 Flag Lifecycle
+## 5. 🔄 Flag Lifecycle
 Track the age and staleness of your feature flags.
-- **What it shows:** How old each flag is, when it was last modified, zombie flag warnings
-- **Stale flags:** Flags not changed in 90+ days are marked as stale
-- **Zombie flags:** Flags that exist in config but are never referenced in code
+- **Stale flags (90+ days):** Yellow warning — consider reviewing or removing
+- **Zombie flags:** Flags that exist in config but are never referenced in code — safe to remove
+- **Age tracking:** See exactly how old each flag is
 
-## 🤖 AI Chat
+## 6. 🔍 Flag Search
+Search for specific flags across your projects.
+- **How:** Enter a flag name or keyword → results show matching flags with details
+- **Tip:** Use this when you need to quickly find a specific flag's status
+
+## 7. 🤖 AI Chat
 Ask questions about your feature flags using AI.
-- **How:** Type a question like "What conflicts exist in my project?" → Press Enter
+- **How:** Type a question → Press Enter
 - **Examples:**
+  - "What conflicts exist in my project?"
   - "Explain the conflict between flag_a and flag_b"
   - "Which flags are safe to remove?"
-  - "What's the risk of enabling dark_mode?"
-- **Tip:** The AI uses your actual scan data for grounded answers
+- **Tip:** The AI uses your actual scan data for grounded, accurate answers
 
-## 🔔 Notifications
-View system notifications and alerts.
-- **What you see:** New scan results, flag health changes, admin announcements
-
-## 👤 Profile & Data Rights
-Manage your account and exercise your data rights.
+## 8. 👤 Profile
+Manage your account settings and data rights.
+- **View profile:** Email, name, role, join date
+- **Change password:** Enter current password → new password → confirm
 - **Export My Data:** Download all your personal data as JSON (GDPR Article 15)
-- **Request Account Deletion:** Submit a deletion request (reviewed by admin)
+- **Request Deletion:** Submit a deletion request (reviewed by admin)
 
 ---
 

@@ -188,7 +188,95 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 env_btn.click(create_env, inputs=[env_proj, env_name_inp, env_overrides], outputs=[env_result])
                 drift_btn.click(compare_drift, inputs=[drift_a, drift_b], outputs=[drift_result])
 
-            # Tab 3: Webhooks
+            # Tab 3: Reports
+            with gr.TabItem("📑 Reports"):
+                with gr.Group(elem_classes=["glass-card"]):
+                    with gr.Row():
+                        rep_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=3)
+                        rep_fmt = gr.Dropdown(label="Format", choices=["json","csv","markdown"], value="json", scale=1)
+                        rep_btn = gr.Button("Generate", elem_classes=["glass-btn"], scale=1)
+                    rep_result = gr.JSON(label="Report")
+                    gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
+                    exec_proj = gr.Dropdown(label="Project (Executive Summary)", choices=[], interactive=True)
+                    exec_btn = gr.Button("Executive Summary", elem_classes=["glass-btn"])
+                    exec_result = gr.JSON(label="Summary")
+
+                def gen_report(pid, fmt):
+                    if not pid:
+                        return {"error": "Enter Project ID"}
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Scan
+                        db = SessionLocal()
+                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).limit(5).all()
+
+                        if not scans:
+                            return {"error": "No scans found"}
+                        return {"project_id": pid, "format": fmt, "total_scans": len(scans),
+                                "scans": [{"id": s.id, "status": s.status, "health": (s.result_summary or {}).get("health_score", "N/A"),
+                                           "flags": (s.result_summary or {}).get("flag_count", 0), "date": str(s.created_at)} for s in scans]}
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                def exec_summary(pid):
+                    if not pid:
+                        return {"error": "Enter Project ID"}
+                    try:
+                        from flagguard.core.db import SessionLocal
+                        from flagguard.core.models.tables import Scan, Project
+                        db = SessionLocal()
+                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
+                        if not proj:
+                            return {"error": "Project not found"}
+                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).all()
+
+                        total = len(scans)
+                        avg_health = sum((s.result_summary or {}).get("health_score", 0) for s in scans) / max(total, 1)
+                        latest = scans[0] if scans else None
+                        return {"project": proj.name, "total_scans": total, "avg_health": f"{avg_health:.0f}%",
+                                "latest_scan": str(latest.created_at) if latest else "Never",
+                                "latest_health": (latest.result_summary or {}).get("health_score", "N/A") if latest else "N/A"}
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                rep_btn.click(gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result])
+                exec_btn.click(exec_summary, inputs=[exec_proj], outputs=[exec_result])
+
+            # Tab 4: IaC Scan
+            with gr.TabItem("🏗️ IaC Scan"):
+                with gr.Group(elem_classes=["glass-card"]):
+                    gr.HTML("<div class='sidebar-title'>Terraform / CloudFormation / Pulumi Analysis</div>")
+                    iac_file = gr.File(label="Upload IaC File (.tf, .yaml, .json)", file_types=[".tf",".yaml",".yml",".json"])
+                    iac_btn = gr.Button("Analyze", elem_classes=["glass-btn"])
+                    iac_result = gr.JSON(label="Detected Flags")
+
+                def analyze_iac(file):
+                    if not file:
+                        return {"error": "Upload a file first"}
+                    try:
+                        import re
+                        from pathlib import Path
+                        content = Path(file.name).read_text(errors="ignore")
+                        patterns = [
+                            r'feature[_-]?flag[s]?\s*[=:]\s*["\']?([\w.-]+)',
+                            r'enabled\s*[=:]\s*(true|false)',
+                            r'toggle[_-]?([\w.-]+)\s*[=:]',
+                            r'flag[_-]name\s*[=:]\s*["\']([\w.-]+)',
+                            r'variable\s+["\']([\w_]+_enabled)',
+                        ]
+                        found_flags = []
+                        for pat in patterns:
+                            for m in re.finditer(pat, content, re.IGNORECASE):
+                                found_flags.append({"match": m.group(0).strip(), "value": m.group(1) if m.groups() else m.group(0),
+                                                    "line": content[:m.start()].count('\n') + 1})
+                        return {"file": Path(file.name).name, "flags_detected": len(found_flags),
+                                "flags": found_flags[:50], "lines_scanned": content.count('\n') + 1}
+                    except Exception as e:
+                        return {"error": str(e)}
+
+                iac_btn.click(analyze_iac, inputs=[iac_file], outputs=[iac_result])
+
+            # Tab 5: Webhooks
             with gr.TabItem("🪝 Webhooks"):
                 with gr.Group(elem_classes=["glass-card"]):
                     with gr.Row():
@@ -245,7 +333,7 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 wh_btn.click(create_webhook, inputs=[wh_proj, wh_url, wh_events], outputs=[wh_result])
                 wh_test_btn.click(test_webhook, inputs=[wh_test_id], outputs=[wh_test_result])
 
-            # Tab 4: Scheduler
+            # Tab 6: Scheduler
             with gr.TabItem("⏰ Scheduler"):
                 with gr.Group(elem_classes=["glass-card"]):
                     gr.HTML("<div class='sidebar-title'>Schedule Recurring Scans</div>")
@@ -301,93 +389,6 @@ def create_analyst_dashboard(app: gr.Blocks, user_state: gr.State):
                 sched_btn.click(create_schedule, inputs=[sched_proj, sched_interval], outputs=[sched_result])
                 trend_btn.click(load_trends, inputs=[trend_proj, trend_days], outputs=[trend_result])
 
-            # Tab 5: Reports
-            with gr.TabItem("📑 Reports"):
-                with gr.Group(elem_classes=["glass-card"]):
-                    with gr.Row():
-                        rep_proj = gr.Dropdown(label="Project", choices=[], interactive=True, scale=3)
-                        rep_fmt = gr.Dropdown(label="Format", choices=["json","csv","markdown"], value="json", scale=1)
-                        rep_btn = gr.Button("Generate", elem_classes=["glass-btn"], scale=1)
-                    rep_result = gr.JSON(label="Report")
-                    gr.HTML("<div style='margin:16px 0;border-top:1px solid rgba(212,175,55,0.1);'></div>")
-                    exec_proj = gr.Dropdown(label="Project (Executive Summary)", choices=[], interactive=True)
-                    exec_btn = gr.Button("Executive Summary", elem_classes=["glass-btn"])
-                    exec_result = gr.JSON(label="Summary")
-
-                def gen_report(pid, fmt):
-                    if not pid:
-                        return {"error": "Enter Project ID"}
-                    try:
-                        from flagguard.core.db import SessionLocal
-                        from flagguard.core.models.tables import Scan
-                        db = SessionLocal()
-                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).limit(5).all()
-
-                        if not scans:
-                            return {"error": "No scans found"}
-                        return {"project_id": pid, "format": fmt, "total_scans": len(scans),
-                                "scans": [{"id": s.id, "status": s.status, "health": (s.result_summary or {}).get("health_score", "N/A"),
-                                           "flags": (s.result_summary or {}).get("flag_count", 0), "date": str(s.created_at)} for s in scans]}
-                    except Exception as e:
-                        return {"error": str(e)}
-
-                def exec_summary(pid):
-                    if not pid:
-                        return {"error": "Enter Project ID"}
-                    try:
-                        from flagguard.core.db import SessionLocal
-                        from flagguard.core.models.tables import Scan, Project
-                        db = SessionLocal()
-                        proj = db.query(Project).filter(Project.id == pid.strip()).first()
-                        if not proj:
-                            return {"error": "Project not found"}
-                        scans = db.query(Scan).filter(Scan.project_id == pid.strip()).order_by(Scan.created_at.desc()).all()
-
-                        total = len(scans)
-                        avg_health = sum((s.result_summary or {}).get("health_score", 0) for s in scans) / max(total, 1)
-                        latest = scans[0] if scans else None
-                        return {"project": proj.name, "total_scans": total, "avg_health": f"{avg_health:.0f}%",
-                                "latest_scan": str(latest.created_at) if latest else "Never",
-                                "latest_health": (latest.result_summary or {}).get("health_score", "N/A") if latest else "N/A"}
-                    except Exception as e:
-                        return {"error": str(e)}
-
-                rep_btn.click(gen_report, inputs=[rep_proj, rep_fmt], outputs=[rep_result])
-                exec_btn.click(exec_summary, inputs=[exec_proj], outputs=[exec_result])
-
-            # Tab 6: IaC Scan
-            with gr.TabItem("🏗️ IaC Scan"):
-                with gr.Group(elem_classes=["glass-card"]):
-                    gr.HTML("<div class='sidebar-title'>Terraform / CloudFormation / Pulumi Analysis</div>")
-                    iac_file = gr.File(label="Upload IaC File (.tf, .yaml, .json)", file_types=[".tf",".yaml",".yml",".json"])
-                    iac_btn = gr.Button("Analyze", elem_classes=["glass-btn"])
-                    iac_result = gr.JSON(label="Detected Flags")
-
-                def analyze_iac(file):
-                    if not file:
-                        return {"error": "Upload a file first"}
-                    try:
-                        import re
-                        from pathlib import Path
-                        content = Path(file.name).read_text(errors="ignore")
-                        patterns = [
-                            r'feature[_-]?flag[s]?\s*[=:]\s*["\']?([\w.-]+)',
-                            r'enabled\s*[=:]\s*(true|false)',
-                            r'toggle[_-]?([\w.-]+)\s*[=:]',
-                            r'flag[_-]name\s*[=:]\s*["\']([\w.-]+)',
-                            r'variable\s+["\']([\w_]+_enabled)',
-                        ]
-                        found_flags = []
-                        for pat in patterns:
-                            for m in re.finditer(pat, content, re.IGNORECASE):
-                                found_flags.append({"match": m.group(0).strip(), "value": m.group(1) if m.groups() else m.group(0),
-                                                    "line": content[:m.start()].count('\n') + 1})
-                        return {"file": Path(file.name).name, "flags_detected": len(found_flags),
-                                "flags": found_flags[:50], "lines_scanned": content.count('\n') + 1}
-                    except Exception as e:
-                        return {"error": str(e)}
-
-                iac_btn.click(analyze_iac, inputs=[iac_file], outputs=[iac_result])
 
             # Tab 7: Lifecycle
             with gr.TabItem("⏳ Lifecycle"):

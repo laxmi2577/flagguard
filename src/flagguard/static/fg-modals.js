@@ -172,10 +172,45 @@
         }
     });
 
+    // ── Password show/hide toggle ─────────────────────────────────────
+    function addPasswordToggles() {
+        var inputs = document.querySelectorAll('input[type="password"]');
+        inputs.forEach(function(inp) {
+            if (inp.dataset.fgToggled) return; // already has toggle
+            inp.dataset.fgToggled = '1';
+            var wrapper = inp.parentElement;
+            if (!wrapper) return;
+            wrapper.style.position = 'relative';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerHTML = '&#128065;'; // 👁 eye icon
+            btn.title = 'Show/Hide password';
+            btn.style.cssText = 'position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:#94a3b8;padding:4px;z-index:10;opacity:0.7;transition:opacity 0.2s;';
+            btn.addEventListener('mouseenter', function() { btn.style.opacity = '1'; });
+            btn.addEventListener('mouseleave', function() { btn.style.opacity = '0.7'; });
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (inp.type === 'password') {
+                    inp.type = 'text';
+                    btn.innerHTML = '&#128064;'; // 👀
+                    btn.title = 'Hide password';
+                } else {
+                    inp.type = 'password';
+                    btn.innerHTML = '&#128065;'; // 👁
+                    btn.title = 'Show password';
+                }
+            });
+            wrapper.appendChild(btn);
+            inp.style.paddingRight = '36px';
+        });
+    }
+
     // ── Init: retry until body is available ──────────────────────────
     function tryInit() {
         if (document.body) {
             createOverlays();
+            addPasswordToggles();
         } else {
             setTimeout(tryInit, 100);
         }
@@ -191,6 +226,7 @@
     var retries = 0;
     var interval = setInterval(function() {
         createOverlays();
+        addPasswordToggles();
         retries++;
         if (retries > 20) clearInterval(interval);
     }, 500);

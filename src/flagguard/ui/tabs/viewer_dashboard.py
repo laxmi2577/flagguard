@@ -89,7 +89,12 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                         with gr.Group(elem_classes=["glass-card"]):
                             plot_severity = gr.Plot(label="Conflict Severity")
 
-            # --- Tab 3: Dependency Graph ---
+            # --- Tab 3: Report ---
+            with gr.TabItem("📄 Report"):
+                with gr.Group(elem_classes=["glass-card"]):
+                    report_md = gr.Markdown("No scan data. Ask an Analyst or Admin to run a scan on your project.")
+
+            # --- Tab 4: Dependency Graph ---
             with gr.TabItem("🔗 Dependency Graph"):
                 with gr.Group(elem_classes=["glass-card"]):
                     gr.HTML("<div class='sidebar-title'>Dependency Graph (Read-Only)</div>")
@@ -97,10 +102,6 @@ def create_viewer_dashboard(app: gr.Blocks, user_state: gr.State):
                 with gr.Accordion("Mermaid Code", open=False):
                     mermaid_code_display = gr.Code(label="Mermaid Definition", language=None, lines=15, interactive=False)
 
-            # --- Tab 4: Report ---
-            with gr.TabItem("📄 Report"):
-                with gr.Group(elem_classes=["glass-card"]):
-                    report_md = gr.Markdown("No scan data. Ask an Analyst or Admin to run a scan on your project.")
 
             # --- Tab 5: Flag Lifecycle (Read-Only) ---
             with gr.TabItem("⏳ Flag Lifecycle"):

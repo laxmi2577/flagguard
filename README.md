@@ -22,8 +22,6 @@
 
 ---
 
-
-
 </div>
 
 ---
@@ -60,6 +58,54 @@ FlagGuard isn't just a CLI. It includes a beautiful, interactive "Liquid Glass" 
 - **Project Codes:** Every project has a mandatory human-readable `project_code` (e.g. `PROJ_1`) as its primary identifier
 - **Admin Project Assignment:** Admins can explicitly assign users to specific projects with `read` or `write` access levels via a dedicated management UI
 - **Data Isolation:** Users only see projects they own or have been assigned to — enforced via a `ProjectMember` bridge table
+
+---
+
+## 🖥️ Role-Based Dashboards
+
+Each role gets an isolated dashboard with tabs ordered by workflow priority:
+
+### 👑 Admin Dashboard (11 Tabs)
+| # | Tab | Description |
+|---|-----|-------------|
+| 1 | ⚡ Analysis | Create projects, upload manifests, run AI-powered scans |
+| 2 | 🌍 Environments | Create dev/staging/prod environments, detect flag drift |
+| 3 | 📑 Reports | Generate JSON/CSV/Markdown reports, executive summaries |
+| 4 | 🏗️ IaC Scan | Scan Terraform, YAML, JSON for feature flag references |
+| 5 | 🚦 CI/CD Gate | Set health score thresholds to block bad deployments |
+| 6 | 📋 Audit Log | Immutable system audit trail with filters and export |
+| 7 | 📊 Analytics | Platform-wide stats, leaderboard, project health cards |
+| 8 | 🔌 Plugins | Register, toggle, and manage analysis plugins |
+| 9 | ✅ User Approvals | Approve or reject new user signup requests |
+| 10 | 👥 User Management | Change roles, reset passwords, RBAC project assignment |
+| 11 | 👤 Profile | View profile, change password |
+
+### 🔬 Analyst Dashboard (9 Tabs)
+| # | Tab | Description |
+|---|-----|-------------|
+| 1 | ⚡ Analysis | Create projects, run scans with AI analysis |
+| 2 | 🌍 Environments | Manage environments and compare drift |
+| 3 | 📑 Reports | Generate and export analysis reports |
+| 4 | 🏗️ IaC Scan | Scan infrastructure-as-code files |
+| 5 | 🔗 Webhooks | Configure scan completion notifications |
+| 6 | 📅 Scheduler | Automate recurring scans on a cron schedule |
+| 7 | 🔄 Lifecycle | Track flag age, stale flags, and zombie flags |
+| 8 | 🔀 Compare Scans | Diff two scans side-by-side |
+| 9 | 👤 Profile | Account settings and data rights |
+
+### 👁 Viewer Dashboard (8 Tabs)
+| # | Tab | Description |
+|---|-----|-------------|
+| 1 | 📋 Scan History | View all past scans for assigned projects |
+| 2 | 📊 Analytics | Visual charts for flag status and severity |
+| 3 | 📄 Report | Download markdown analysis reports |
+| 4 | 🕸 Dependency Graph | Interactive flag relationship visualization |
+| 5 | 🔄 Flag Lifecycle | Stale flag warnings and zombie flag detection |
+| 6 | 🔍 Flag Search | Search for specific flags across projects |
+| 7 | 🤖 AI Chat | Ask AI questions grounded in your scan data |
+| 8 | 👤 Profile | Account settings and data rights |
+
+> Each dashboard includes a **"How To Use"** button in the navbar that opens a comprehensive guide for every tab specific to that role.
 
 ---
 
@@ -209,7 +255,7 @@ flowchart LR
 ### ML Architecture Components
 
 | Component | Technology | File | Purpose |
-|-----------|-----------|------|---------
+|-----------|-----------|------|---------|
 | **Feature Extractor** | GitPython | `scripts/generate_training_data.py` | Mines 15 per-commit features from `.git` history (flag mentions, file types, commit hour, author experience) |
 | **Data Augmentation** | NumPy | `scripts/generate_training_data.py` | Synthetic sample generation for class-balanced training (30% conflict rate) |
 | **Model Training** | XGBoost + scikit-learn | `notebooks/train_risk_model.py` | GridSearchCV (5-fold CV) over depth/LR/estimators; logs to MLflow |
@@ -234,7 +280,6 @@ flowchart LR
 │  days_since_last_commit       │  │                               │
 └───────────────────────────────┘  └───────────────────────────────┘
 ```
-
 
 ---
 
@@ -279,46 +324,11 @@ flowchart LR
 
 ---
 
-## 📚 Comprehensive Documentation Directory
-
-We maintain rigorous documentation standards. Explore the architecture and usage guides below:
-
-*   🚀 **[Installation & Quick Start Guide](docs/INSTALLATION.md)** — CLI installation, CI/CD pipeline integration, and Web UI setup.
-*   🏗️ **[Architecture & System Design](docs/ARCHITECTURE.md)** — Deep dive into the Z3 SAT solver implementation, AST parsing, and relational database schema.
-*   🔌 **[API Reference & SDK Docs](docs/API_DOCUMENTATION.md)** — Documentation for the Python SDK, 31 FastAPI REST endpoints, and CLI commands.
-*   🤝 **[Contributing Guidelines](docs/CONTRIBUTING.md)** — How to submit PRs, run local tests, and add support for new parsers like Split.io.
-
----
-
-## 🛠️ Quick Start Implementation
-
-Install FlagGuard using [`uv`](https://github.com/astral-sh/uv) (recommended) or `pip`:
-
-```bash
-uv tool install flagguard
-```
-
-### 1. Perform a Static Codebase Audit
-Execute a local mathematical proof of your feature flags against your source code:
-
-```bash
-flagguard analyze --config config/prod_flags.json --source ./src/backend --fail-on-critical
-```
-
-### 2. Launch the Enterprise Dashboard
-Spin up the interactive Web UI and FastAPI backend to manage environments and view interactive dependency graphs:
-
-```bash
-# Start the web interface
-uv run python src/flagguard/ui/app.py
-```
-*Login with `admin@example.com` / `Admin@123` at http://localhost:8000.*
-
----
-
 ## ⚖️ Global Compliance & Legal
 
-FlagGuard is built to meet international data privacy regulations across all supported deployment regions:
+FlagGuard is production-ready for **India, US, UK, and EU markets** with a comprehensive compliance framework implemented across 6 phases.
+
+### Regulatory Coverage
 
 | Regulation | Region | Status | Key Features |
 |-----------|--------|--------|--------------|
@@ -328,22 +338,94 @@ FlagGuard is built to meet international data privacy regulations across all sup
 | **PDPB / DPDPA** | India | ✅ Implemented | Grievance Officer: Laxmiranjan Sahu (`laxmiranjan444@gmail.com`), Data Principal rights |
 
 ### Compliance Features
-- 🍪 **Cookie Consent Banner** — Accept All / Essential Only / Decline All with verifiable server-side logging
-- 📄 **Legal Document Center** — Privacy Policy, Terms of Service, Acceptable Use Policy, Accessibility Statement, AI Transparency Statement, Data Inventory (accessible from footer)
-- 📦 **Data Export (DSAR Art.15)** — Self-service JSON export of all personal data from user dashboard
-- 🗑️ **Account Deletion (Art.17)** — Soft-delete with admin review workflow
-- 🤖 **AI Transparency** — Full model disclosure for SAT-solver, GraphRAG, and LLM components
-- ♿ **Accessibility** — WCAG 2.2 AA compliant UI with keyboard navigation and reduced-motion support
+
+| Feature | Description |
+|---------|-------------|
+| 🍪 **Cookie Consent** | Accept All / Essential Only / Decline All — consent logged server-side to `ConsentLog` table with IP, user-agent, and policy version (GDPR Art.7 proof) |
+| 📄 **Legal Document Center** | Privacy Policy, Terms of Service, Acceptable Use Policy — rendered as floating modal popups from footer links |
+| 📦 **Data Export (DSAR Art.15)** | Self-service JSON export of all personal data from any user dashboard |
+| 🗑️ **Account Deletion (Art.17)** | Soft-delete with admin review workflow via `DeletionRequest` table |
+| 🤖 **AI Transparency** | Full model disclosure for Z3 SAT solver, GraphRAG, XGBoost/SHAP, and LLM components |
+| ♿ **Accessibility (WCAG 2.2 AA)** | Keyboard navigation with gold focus rings, `@media (prefers-reduced-motion: reduce)` support, formal ADA/EAA/RPwD statement |
+| 📊 **Data Inventory (ROPA)** | Complete Record of Processing Activities mapping every DB table to classification tier, lawful basis, retention period |
+
+### Implementation Details
+
+- **Modal System:** Pure HTML/CSS/JS overlays injected via `gr.HTML()` — bypasses Gradio's Svelte containment (`contain: inline-size`) that breaks `position: fixed` CSS. Cookie consent and legal reader work as true floating centered popups.
+- **Consent Logging:** JS calls `POST /api/v1/consent` on cookie choice — stores IP, user-agent, consent type, and policy version in `ConsentLog` DB table.
+- **DSAR Self-Service:** All 3 dashboards include "🔐 Your Data Rights" section. Admin dashboard additionally includes a pending deletion management panel with Approve/Reject controls.
+
+### Footer Layout
+```
+Privacy Policy | Terms of Service | Acceptable Use | Accessibility | AI Transparency | Data Inventory
+© 2026 FlagGuard Enterprise Intelligence. Built for SOC2/ISO27001 Environments.
+Grievance Officer: Laxmiranjan Sahu · laxmiranjan444@gmail.com
+```
 
 > **Legal docs location:** `docs/legal/` — `privacy_policy.md`, `terms_of_service.md`, `acceptable_use.md`, `accessibility_statement.md`, `ai_transparency.md`, `data_inventory.md`
 
 ---
 
-## 🗺️ Engineering Roadmap (v0.2.0 - v1.0.0)
+## 🛠️ Quick Start
 
-FlagGuard is actively developed with a focus on enterprise scalability:
+Install FlagGuard using [`uv`](https://github.com/astral-sh/uv) (recommended) or `pip`:
 
-- **[Done] Global Compliance:** GDPR, CCPA, UK GDPR, and PDPB/DPDPA compliant cookie consent, DSAR workflow, and legal document center.
+```bash
+uv tool install flagguard
+```
+
+### 1. Launch the Enterprise Dashboard
+```bash
+uv run python src/flagguard/ui/app.py
+```
+Open http://localhost:8000 — Login with `admin@example.com` / `Admin@123`
+
+### 2. CLI: Run a Static Codebase Audit
+```bash
+# Analyze flags from a config file
+flagguard analyze --config config/prod_flags.json
+
+# Generate a dependency graph
+flagguard graph --config config/prod_flags.json
+
+# Full scan with source code
+flagguard scan --config config/prod_flags.json --source ./src/backend
+```
+
+### 3. CLI Commands Reference
+| Command | Description |
+|---------|-------------|
+| `flagguard analyze -c <file>` | Analyze feature flags for conflicts and dead code |
+| `flagguard graph -c <file>` | Generate dependency graph as Mermaid diagram |
+| `flagguard scan` | Full project scan using all analyzers |
+| `flagguard parse -c <file>` | Parse and display flag configuration |
+| `flagguard explain` | Get detailed explanation for a specific conflict |
+| `flagguard explain-flag` | Explain a feature flag using RAG |
+| `flagguard check-llm` | Check LLM (Ollama) availability |
+| `flagguard init` | Initialize FlagGuard in current directory |
+| `flagguard --version` | Show installed version |
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| 🚀 **[Installation & Quick Start](docs/INSTALLATION.md)** | CLI installation, CI/CD pipeline integration, Web UI setup |
+| 🏗️ **[Architecture & System Design](docs/ARCHITECTURE.md)** | Z3 SAT solver, AST parsing, database schema deep dive |
+| 🔌 **[API Reference](docs/API_DOCUMENTATION.md)** | Python SDK, 31 FastAPI REST endpoints, CLI commands |
+| 🤝 **[Contributing](docs/CONTRIBUTING.md)** | How to submit PRs, run tests, add new parsers |
+| 📖 **[Admin Guide](docs/help/admin_guide.md)** | How to use every tab in the Admin dashboard |
+| 📖 **[Analyst Guide](docs/help/analyst_guide.md)** | How to use every tab in the Analyst dashboard |
+| 📖 **[Viewer Guide](docs/help/viewer_guide.md)** | How to use every tab in the Viewer dashboard |
+
+---
+
+## 🗺️ Engineering Roadmap (v0.2.0 → v1.0.0)
+
+- **[Done] Global Compliance:** GDPR, CCPA, UK GDPR, and PDPB/DPDPA — cookie consent, DSAR, legal docs, AI transparency, accessibility.
+- **[Done] Dashboard Optimization:** Reordered all 3 dashboards by workflow priority, added "How To Use" guides.
+- **[Done] Security Hardening:** Password visibility toggles, pure HTML modal system, consent server-side logging.
 - **[In Progress] Global Language Expansion:** High-performance AST parsing for Go, Java, and Ruby codebases.
 - **[Planned] Enterprise Identity:** SAML SSO integration and advanced Audit Logging retention.
 - **[Planned] Developer Experience:** Official VS Code Extension for real-time mathematical conflict highlighting in IDE.
