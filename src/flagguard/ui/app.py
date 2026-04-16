@@ -395,11 +395,12 @@ def launch():
     # ── Mount Gradio onto FastAPI — SINGLE SERVER, SHARED COOKIES ────────
     gr.mount_gradio_app(api_app, gradio_app, path="/")
 
-    print("[OK] FlagGuard starting on http://localhost:8000")
-    print("[OK] Dashboard \u2192 http://localhost:8000/")
-    print("[OK] API Docs  \u2192 http://localhost:8000/docs")
+    port = int(os.environ.get("PORT", 8000))
+    print(f"[OK] FlagGuard starting on http://localhost:{port}")
+    print(f"[OK] Dashboard \u2192 http://localhost:{port}/")
+    print(f"[OK] API Docs  \u2192 http://localhost:{port}/docs")
 
-    uvicorn.run(api_app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(api_app, host="0.0.0.0", port=port, log_level="info")
 
 
 if __name__ == "__main__":
