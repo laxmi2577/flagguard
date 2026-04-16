@@ -118,7 +118,11 @@ app.mount("/fg-static", StaticFiles(directory=_static_dir), name="fg-static")
 from starlette.responses import Response
 
 class ScriptInjectionMiddleware(BaseHTTPMiddleware):
-    SCRIPT_TAG = b'<script src="/fg-static/fg-modals.js"></script>'
+    SCRIPT_TAG = (
+        # Custom favicon — base64 SVG so no extra file needed
+        b'<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%230f0f1a%22%2F%3E%3Cpath%20d%3D%22M16%204%20L26%208%20L26%2019%20C26%2024.5%2021.5%2028.5%2016%2030%20C10.5%2028.5%206%2024.5%206%2019%20L6%208%20Z%22%20fill%3D%22none%22%20stroke%3D%22%23d4af37%22%20stroke-width%3D%222%22%2F%3E%3Cline%20x1%3D%2213%22%20y1%3D%2210%22%20x2%3D%2213%22%20y2%3D%2223%22%20stroke%3D%22%23d4af37%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M13%2010%20L21%2013%20L13%2016%20Z%22%20fill%3D%22%23d4af37%22%2F%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%224%22%20r%3D%221%22%20fill%3D%22%233b82f6%22%2F%3E%3Ccircle%20cx%3D%2226%22%20cy%3D%228%22%20r%3D%221%22%20fill%3D%22%233b82f6%22%2F%3E%3Ccircle%20cx%3D%226%22%20cy%3D%228%22%20r%3D%221%22%20fill%3D%22%233b82f6%22%2F%3E%3C%2Fsvg%3E">'
+        b'\n<script src="/fg-static/fg-modals.js"></script>'
+    )
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)

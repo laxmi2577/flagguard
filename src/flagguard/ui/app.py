@@ -6,6 +6,47 @@ role-specific dashboard (viewer / analyst / admin).
 
 import gradio as gr
 
+# ── FlagGuard SVG Logo (used on login, signup, browser favicon) ───────────────
+# Shield + flag pennant + AI circuit dots. Gold/blue on dark.
+FG_LOGO_SVG = """<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:56px;height:56px;">
+  <defs>
+    <linearGradient id="lg-bg" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f0f1a"/><stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <radialGradient id="lg-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#d4af37" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#d4af37" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="56" height="56" rx="14" fill="url(#lg-bg)"/>
+  <rect width="56" height="56" rx="14" fill="url(#lg-glow)"/>
+  <!-- Shield -->
+  <path d="M28 7 L44 13 L44 30 C44 39 36.5 45.5 28 48 C19.5 45.5 12 39 12 30 L12 13 Z"
+        fill="none" stroke="url(#lg-gold)" stroke-width="1.8" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="lg-gold" x1="12" y1="7" x2="44" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  <!-- Flag staff -->
+  <line x1="22" y1="17" x2="22" y2="38" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+  <!-- Flag pennant -->
+  <path d="M22 17 L34 21.5 L22 26 Z" fill="#d4af37"/>
+  <!-- AI circuit nodes -->
+  <circle cx="28" cy="7" r="1.5" fill="#3b82f6" opacity="0.9"/>
+  <circle cx="44" cy="13" r="1.5" fill="#3b82f6" opacity="0.9"/>
+  <circle cx="44" cy="30" r="1.5" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="12" cy="13" r="1.5" fill="#3b82f6" opacity="0.9"/>
+  <circle cx="12" cy="30" r="1.5" fill="#3b82f6" opacity="0.7"/>
+  <circle cx="28" cy="48" r="1.5" fill="#3b82f6" opacity="0.6"/>
+  <!-- AI circuit lines -->
+  <line x1="28" y1="7" x2="22" y2="17" stroke="#3b82f6" stroke-width="0.5" opacity="0.4"/>
+  <line x1="44" y1="13" x2="34" y2="21.5" stroke="#3b82f6" stroke-width="0.5" opacity="0.4"/>
+  <line x1="12" y1="30" x2="22" y2="26" stroke="#3b82f6" stroke-width="0.5" opacity="0.35"/>
+  <!-- Outer glow ring -->
+  <circle cx="28" cy="28" r="26" stroke="#d4af37" stroke-width="0.4" opacity="0.15"/>
+</svg>"""
+
 from flagguard.ui.styles import LIQUID_GLASS_CSS, get_theme
 from flagguard.ui.tabs.viewer_dashboard  import create_viewer_dashboard
 from flagguard.ui.tabs.analyst_dashboard import create_analyst_dashboard
@@ -22,7 +63,7 @@ def create_app():
     # This completely bypasses Gradio's DOMPurify sanitization.
     # ══════════════════════════════════════════════════════════════════════
 
-    with gr.Blocks(title="FlagGuard", theme=theme, css=LIQUID_GLASS_CSS) as app:
+    with gr.Blocks(title="FlagGuard · AI-Powered Flag Intelligence", theme=theme, css=LIQUID_GLASS_CSS) as app:
         # ── Shared state ────────────────────────────────────────────────────
         user_id       = gr.State("")
         user_role     = gr.State("viewer")
@@ -44,11 +85,11 @@ def create_app():
 
                     # ── LOGIN CARD ───────────────────────────────────────────
                     with gr.Group(visible=True, elem_classes=["glass-card","shimmer-border"]) as login_card:
-                        gr.HTML("""
+                        gr.HTML(f"""
                         <div style='text-align:center;margin-bottom:28px;'>
-                            <div class='login-logo'>🛡</div>
+                            <div class='login-logo' style='display:flex;justify-content:center;margin-bottom:8px;'>{FG_LOGO_SVG}</div>
                             <div class='login-title'>FlagGuard</div>
-                            <div class='login-subtitle'>Enterprise Feature Flag Intelligence</div>
+                            <div class='login-subtitle'>AI-Powered Feature Flag Intelligence</div>
                         </div>
                         <div class='sidebar-title' style='text-align:center;margin-bottom:16px;'>Sign In</div>""")
 
@@ -64,9 +105,9 @@ def create_app():
 
                     # ── SIGNUP CARD ──────────────────────────────────────────
                     with gr.Group(visible=False, elem_classes=["glass-card","shimmer-border"]) as signup_card:
-                        gr.HTML("""
+                        gr.HTML(f"""
                         <div style='text-align:center;margin-bottom:28px;'>
-                            <div class='login-logo'>📝</div>
+                            <div class='login-logo' style='display:flex;justify-content:center;margin-bottom:8px;'>{FG_LOGO_SVG}</div>
                             <div class='login-title'>Request Access</div>
                             <div class='login-subtitle'>Admin will review your request</div>
                         </div>""")

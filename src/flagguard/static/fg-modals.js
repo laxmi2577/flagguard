@@ -6,6 +6,48 @@
     // completely bypassing Gradio's DOMPurify sanitization.
     // ═══════════════════════════════════════════════════════════════════
 
+    // ── Dark/Light Theme Toggle ──────────────────────────────────────
+    // Must live here (not in gr.HTML script tags) because Gradio
+    // strips <script> tags via DOMPurify.
+    (function initTheme() {
+        var pref = localStorage.getItem('fg_theme') || 'dark';
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+                document.body.classList.remove('dark');
+            } else {
+                document.body.classList.remove('light-mode');
+                document.body.classList.add('dark');
+            }
+            var btn = document.getElementById('fg-theme-toggle');
+            if (btn) {
+                btn.innerHTML = theme === 'light' ? '☀️ Light' : '🌙 Dark';
+            }
+        }
+        // Apply on load (retry because Gradio may rebuild body)
+        if (document.body) {
+            applyTheme(pref);
+        }
+        setTimeout(function() { applyTheme(pref); }, 500);
+        setTimeout(function() { applyTheme(pref); }, 1500);
+        setTimeout(function() { applyTheme(pref); }, 3000);
+
+        // Global toggle function called by header button onclick
+        window.fgToggleTheme = function() {
+            var isLight = document.body.classList.toggle('light-mode');
+            if (isLight) {
+                document.body.classList.remove('dark');
+            } else {
+                document.body.classList.add('dark');
+            }
+            localStorage.setItem('fg_theme', isLight ? 'light' : 'dark');
+            var btn = document.getElementById('fg-theme-toggle');
+            if (btn) {
+                btn.innerHTML = isLight ? '☀️ Light' : '🌙 Dark';
+            }
+        };
+    })();
+
     var LEGAL_TITLES = {
         privacy: 'Privacy Policy',
         terms: 'Terms of Service',
@@ -102,6 +144,41 @@
             } catch(x) {}
             e.preventDefault();
             return;
+        }
+
+        // ── Header action buttons (data-action) ─────────────────────
+        var actionEl = t.closest ? t.closest('[data-action]') : null;
+        if (actionEl) {
+            var action = actionEl.getAttribute('data-action');
+
+            // Dark/Light theme toggle
+            if (action === 'toggle-theme') {
+                window.fgToggleTheme();
+                e.preventDefault();
+                return;
+            }
+
+            // Sign out — click the hidden Gradio logout button
+            if (action === 'sign-out') {
+                var wrapper = document.querySelector('.fg-hidden-logout');
+                if (wrapper) {
+                    var btn = wrapper.querySelector('button') || wrapper;
+                    btn.click();
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Notification bell toggle
+            if (action === 'toggle-notif') {
+                var panelId = actionEl.getAttribute('data-notif-panel');
+                var panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                }
+                e.preventDefault();
+                return;
+            }
         }
 
         // Legal document links

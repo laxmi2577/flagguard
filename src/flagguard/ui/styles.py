@@ -323,8 +323,9 @@ input:focus, textarea:focus {
 }
 
 /* === DARK/LIGHT TOGGLE === */
+/* Activated by fgToggleTheme() in fg-modals.js which adds/removes body.light-mode */
 body.light-mode {
-    --bg-deep: #f8f9fa;
+    --bg-deep: #f5f5f0;
     --bg-surface: #ffffff;
     --bg-elevated: #f1f5f9;
     --glass-bg: rgba(0,0,0,0.02);
@@ -333,21 +334,22 @@ body.light-mode {
     --platinum: #1e293b;
     --platinum-dim: #475569;
 }
-body.light-mode .gradio-container { background: #f8f9fa !important; }
-body.light-mode input,
-body.light-mode textarea,
-body.light-mode select {
+body.light-mode, body.light-mode .gradio-container {
+    background: #f5f5f0 !important;
+    color: #1e293b !important;
+}
+body.light-mode input, body.light-mode textarea, body.light-mode select {
     background: #ffffff !important;
     border-color: rgba(212,175,55,0.25) !important;
     color: #1e293b !important;
 }
 body.light-mode .glass-card {
-    background: rgba(255,255,255,0.8) !important;
+    background: rgba(255,255,255,0.85) !important;
     border-color: rgba(212,175,55,0.2) !important;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
 }
 body.light-mode .metric-card {
-    background: rgba(255,255,255,0.6) !important;
+    background: rgba(255,255,255,0.7) !important;
     border-color: rgba(212,175,55,0.15) !important;
 }
 body.light-mode .glass-btn {
@@ -358,7 +360,7 @@ body.light-mode label, body.light-mode .label-wrap {
     color: #475569 !important;
 }
 body.light-mode .app-header {
-    background: rgba(255,255,255,0.9) !important;
+    background: rgba(255,255,255,0.92) !important;
     border-color: rgba(212,175,55,0.15) !important;
 }
 body.light-mode .frosted-sidebar {
@@ -377,6 +379,25 @@ body.light-mode .role-banner-analyst,
 body.light-mode .role-banner-viewer {
     background: rgba(255,255,255,0.5) !important;
 }
+/* Light mode: tabs */
+body.light-mode .tabs > .tab-nav > button { color: #475569 !important; }
+body.light-mode .tabs > .tab-nav > button.selected { color: #92702a !important; border-color: #d4af37 !important; }
+/* Light mode: text inheritance */
+body.light-mode p, body.light-mode span, body.light-mode div,
+body.light-mode h1, body.light-mode h2, body.light-mode h3, body.light-mode h4 { color: inherit; }
+/* Light mode: dropdowns, tables */
+body.light-mode .gradio-dropdown { color: #1e293b !important; }
+body.light-mode table, body.light-mode td, body.light-mode th {
+    color: #1e293b !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+/* Light mode: markdown and code */
+body.light-mode .prose, body.light-mode .markdown-body { color: #1e293b !important; }
+body.light-mode pre, body.light-mode code {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+}
+
 
 /* === WCAG 2.2 AA: Reduced Motion Support === */
 @media (prefers-reduced-motion: reduce) {

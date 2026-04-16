@@ -2,43 +2,22 @@
 
 Provides:
 - Brand logo + status dot
-- Dark / Light mode toggle (Feature D)
-- Notification bell with unread count (Feature A) — loads real data from DB
+- Dark / Light mode toggle
+- Notification bell with unread count — loads real data from DB
 - Role badge
+- How To Use button
 - Sign Out button
+All rendered in a single clean header row.
 """
 
 import gradio as gr
 
-# JS injected once to manage dark/light mode via body class
-DARK_LIGHT_JS = """
-<script>
-(function() {
-    // Restore saved preference
-    var pref = localStorage.getItem('fg_theme') || 'dark';
-    if (pref === 'light') document.body.classList.add('light-mode');
-
-    // Global toggle function called by Gradio button js=
-    window.fgToggleTheme = function() {
-        var isLight = document.body.classList.toggle('light-mode');
-        localStorage.setItem('fg_theme', isLight ? 'light' : 'dark');
-        // Update ALL toggle buttons across dashboards
-        var btns = document.querySelectorAll('.theme-toggle-btn');
-        btns.forEach(function(btn) {
-            // Gradio buttons have inner span elements
-            var sp = btn.querySelector('span') || btn;
-            sp.textContent = isLight ? '\\u2600\\uFE0F Light' : '\\uD83C\\uDF19 Dark';
-        });
-    };
-})();
-</script>
-"""
 
 def build_header_html(role: str, notif_count: int = 0, notifications: list = None) -> str:
-    """Build the full header HTML with brand, notifications, theme toggle and role badge."""
+    """Build the full header HTML with brand, notifications, theme toggle, role badge, help, and sign-out."""
     badge_class = f"badge-{role}"
     role_label  = role.upper()
-    uid = f"notif-{role}"  # unique ID per role to avoid BUG-18
+    uid = f"notif-{role}"
 
     notif_count_label = str(notif_count) if notif_count <= 9 else "9+"
     notif_count_html  = (
@@ -85,25 +64,133 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
     }}
     #{uid}-panel .notif-title {{ font-weight:600; color:#d4af37; margin-bottom:2px; }}
     #{uid}-panel .notif-empty {{ text-align:center; color:#94a3b8; padding:12px 0; }}
+
+    /* Hide the Gradio logout/theme buttons — they exist in DOM for JS click only */
+    .fg-hidden-logout {{ position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; opacity:0 !important; pointer-events:none !important; }}
+
+    /* ── Header action buttons ─────────────────────────────── */
+    .fg-header-actions {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }}
+    .fg-hdr-btn {{
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(212,175,55,0.25);
+        background: rgba(212,175,55,0.08);
+        color: #d4af37;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+        line-height: 1.4;
+    }}
+    .fg-hdr-btn:hover {{
+        background: rgba(212,175,55,0.18);
+        border-color: rgba(212,175,55,0.5);
+        transform: translateY(-1px);
+    }}
+    .fg-hdr-btn.fg-signout {{
+        border-color: rgba(239,68,68,0.3);
+        background: rgba(239,68,68,0.08);
+        color: #f87171;
+    }}
+    .fg-hdr-btn.fg-signout:hover {{
+        background: rgba(239,68,68,0.2);
+        border-color: rgba(239,68,68,0.5);
+    }}
+    .fg-hdr-btn.fg-help {{
+        border-color: rgba(99,102,241,0.4);
+        background: rgba(99,102,241,0.1);
+        color: #818cf8;
+    }}
+    .fg-hdr-btn.fg-help:hover {{
+        background: rgba(99,102,241,0.2);
+        border-color: rgba(99,102,241,0.6);
+    }}
+    /* Light mode overrides */
+    body.light-mode .fg-hdr-btn {{
+        background: rgba(212,175,55,0.12);
+    }}
+    body.light-mode .fg-hdr-btn.fg-signout {{
+        background: rgba(239,68,68,0.1);
+    }}
+    body.light-mode .fg-hdr-btn.fg-help {{
+        background: rgba(99,102,241,0.12);
+    }}
     </style>
 
-    <div style='display:flex;align-items:center;gap:12px;padding:12px 0;position:relative;flex-wrap:wrap;'>
+    <div style='display:flex;align-items:center;gap:12px;padding:10px 0;position:relative;'>
 
         <!-- Brand -->
         <div style='display:flex;align-items:center;gap:10px;flex:1;'>
-            <div style='width:36px;height:36px;background:linear-gradient(135deg,#d4af37,#f59e0b);
-                        border-radius:10px;display:flex;align-items:center;justify-content:center;
-                        font-size:1.1rem;flex-shrink:0;'>&#x1f6e1;</div>
+            <div style='width:40px;height:40px;flex-shrink:0;'>
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:40px;height:40px;">
+                  <defs>
+                    <linearGradient id="hdr-bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#0f0f1a"/>
+                      <stop offset="100%" stop-color="#1a1a2e"/>
+                    </linearGradient>
+                    <linearGradient id="hdr-gold" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#f59e0b"/>
+                      <stop offset="100%" stop-color="#d4af37"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="40" height="40" rx="10" fill="url(#hdr-bg)"/>
+                  <!-- Shield body -->
+                  <path d="M20 5 L32 10 L32 22 C32 28.5 26.5 33.5 20 35 C13.5 33.5 8 28.5 8 22 L8 10 Z" fill="none" stroke="url(#hdr-gold)" stroke-width="1.5" stroke-linejoin="round"/>
+                  <!-- Flag pennant inside shield -->
+                  <line x1="16" y1="13" x2="16" y2="27" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M16 13 L24 16 L16 19 Z" fill="#d4af37"/>
+                  <!-- AI circuit dots -->
+                  <circle cx="20" cy="5" r="1" fill="#3b82f6" opacity="0.8"/>
+                  <circle cx="32" cy="10" r="1" fill="#3b82f6" opacity="0.8"/>
+                  <circle cx="32" cy="22" r="1" fill="#3b82f6" opacity="0.6"/>
+                  <circle cx="8" cy="10" r="1" fill="#3b82f6" opacity="0.8"/>
+                  <circle cx="8" cy="22" r="1" fill="#3b82f6" opacity="0.6"/>
+                  <!-- Glow pulse ring -->
+                  <circle cx="20" cy="20" r="18" stroke="#d4af37" stroke-width="0.3" opacity="0.2"/>
+                </svg>
+              </div>
             <div>
                 <div class='brand-text'>FlagGuard</div>
                 <div class='brand-subtitle'><span class='status-dot'></span>Operational</div>
             </div>
         </div>
 
-        <!-- Notification Bell (Feature A) -->
-        <div style='position:relative;cursor:pointer;' onclick='(function(){{ var p=document.getElementById("{uid}-panel"); if(p) p.style.display=p.style.display==="none"?"block":"none"; }})()' title='Notifications'>
-            <span style='font-size:1.3rem;'>&#x1f514;</span>
-            {notif_count_html}
+        <!-- Right side: all action buttons in one row -->
+        <div class='fg-header-actions'>
+
+            <!-- Notification Bell -->
+            <div style='position:relative;cursor:pointer;padding:4px;' data-action='toggle-notif' data-notif-panel='{uid}-panel' title='Notifications'>
+                <span style='font-size:1.2rem;'>&#x1f514;</span>
+                {notif_count_html}
+            </div>
+
+            <!-- Role Badge -->
+            <span class='{badge_class}' style='margin:0 2px;'>{role_label}</span>
+
+            <!-- How To Use -->
+            <a href='#' data-help='{role}' class='fg-hdr-btn fg-help' title='How to use this dashboard'>&#10067; How To Use</a>
+
+            <!-- Dark/Light Toggle -->
+            <button class='fg-hdr-btn' id='fg-theme-toggle' data-action='toggle-theme' title='Toggle dark/light mode'>
+                🌙 Dark
+            </button>
+
+            <!-- Sign Out -->
+            <button class='fg-hdr-btn fg-signout' id='fg-signout-btn' data-action='sign-out' title='Sign out'>
+                🚪 Sign Out
+            </button>
+
         </div>
 
         <!-- Notification dropdown panel -->
@@ -114,36 +201,31 @@ def build_header_html(role: str, notif_count: int = 0, notifications: list = Non
             {notif_items}
         </div>
 
-        <!-- Role Badge -->
-        <span class='{badge_class}'>{role_label}</span>
-
-        <!-- How To Use Button -->
-        <a href='#' data-help='{role}' style='display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);color:#818cf8;font-family:Outfit,sans-serif;font-weight:600;font-size:0.78rem;text-decoration:none;cursor:pointer;' title='How to use this dashboard'>&#10067; How To Use</a>
-
     </div>
-
-    <!-- Inject JS once -->
-    {DARK_LIGHT_JS}
     """
 
 def create_shared_header(role: str, user_state: gr.State) -> tuple:
     """Create shared header row with brand, notifications, theme toggle, role badge, sign-out.
-    
+
     Returns: (header_html component, logout_btn, theme_btn)
+    The logout_btn is hidden — triggered by the HTML sign-out button via JS.
+    theme_btn is a dummy for backward compatibility.
     """
     header_html = gr.HTML(build_header_html(role, 0))
 
-    # Real Gradio button for theme toggle — uses js= for reliable execution
-    theme_btn = gr.Button(
-        "\U0001f319 Dark", elem_classes=["theme-toggle-btn", "glass-btn"],
-        size="sm", min_width=80,
-    )
-    theme_btn.click(
-        fn=None, inputs=None, outputs=None,
-        js="() => { if(window.fgToggleTheme) window.fgToggleTheme(); }"
+    # Hidden Gradio logout button — the HTML "Sign Out" button clicks this via JS
+    # NOTE: We use visible=True + CSS hiding (not visible=False) because
+    # Gradio's visible=False may not render the element in the DOM at all,
+    # which would break the JS querySelector click trigger.
+    logout_btn = gr.Button(
+        "Sign Out", elem_classes=["fg-hidden-logout"],
+        size="sm", min_width=1,
     )
 
-    logout_btn  = gr.Button("Sign Out", elem_classes=["glass-btn"], size="sm", min_width=90)
+    # Dummy theme button (no longer rendered, kept for API compatibility)
+    theme_btn = gr.Button(
+        "Theme", elem_classes=["fg-hidden-logout"], size="sm", min_width=1,
+    )
 
     def refresh_notif_header(uid):
         """Reload notification count and data when user logs in."""
