@@ -399,6 +399,14 @@ def launch():
     print(f"[OK] FlagGuard starting on http://localhost:{port}")
     print(f"[OK] Dashboard \u2192 http://localhost:{port}/")
     print(f"[OK] API Docs  \u2192 http://localhost:{port}/docs")
+    
+    # Ensure database is generated after all imports are safely resolved
+    try:
+        from flagguard.core.db import init_db
+        print("[OK] Running database migrations...")
+        init_db()
+    except Exception as e:
+        print(f"[ERROR] Database init failed: {e}")
 
     uvicorn.run(api_app, host="0.0.0.0", port=port, log_level="info")
 

@@ -84,20 +84,16 @@ def init_db() -> None:
     # ── Migration: add project_code if missing ───────────────────────────
     from sqlalchemy import inspect, text
     inspector = inspect(engine)
-    columns = [c["name"] for c in inspector.get_columns("projects")]
-    if "project_code" not in columns:
-        print("[MIGRATION] Adding 'project_code' column to projects table...")
-        with engine.begin() as conn:
-            conn.execute(text(
-                "ALTER TABLE projects ADD COLUMN project_code TEXT"
-            ))
-            conn.execute(text(
-                "UPDATE projects SET project_code = UPPER(SUBSTR(id, 1, 8)) "
-                "WHERE project_code IS NULL"
-            ))
-        print("[MIGRATION] Done — existing projects backfilled with UUID prefix")
-
-
-# Auto-run migration when this module is imported (server startup)
-init_db()
-
+    if inspector.has_table("projects"):
+        columns = [c["name"] for c in inspector.get_columns("projects")]
+        if "project_code" not in columns:
+            print("[MIGRATION] Adding 'project_code' column to projects table...")
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE projects ADD COLUMN project_code TEXT"
+                ))
+                conn.execute(text(
+                    "UPDATE projects SET project_code = UPPER(SUBSTR(id, 1, 8)) "
+                    "WHERE project_code IS NULL"
+                ))
+            print("[MIGRATION] Done — existing projects backfilled with UUID prefix")
