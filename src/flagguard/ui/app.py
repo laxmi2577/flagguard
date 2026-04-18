@@ -55,35 +55,35 @@ from flagguard.ui.tabs.admin_dashboard   import create_admin_dashboard
 def create_app():
     theme = get_theme()
 
-    # ══════════════════════════════════════════════════════════════════════
+    # ======================================================================
     # Cookie consent + legal reader modals are handled by:
     #   1. /src/flagguard/static/fg-modals.js (creates overlays on body)
     #   2. ScriptInjectionMiddleware in server.py (injects <script> tag)
     #   3. /api/v1/legal/{key} endpoint (serves legal docs as HTML)
     # This completely bypasses Gradio's DOMPurify sanitization.
-    # ══════════════════════════════════════════════════════════════════════
+    # ======================================================================
 
     with gr.Blocks(title="FlagGuard · AI-Powered Flag Intelligence", theme=theme, css=LIQUID_GLASS_CSS) as app:
-        # ── Shared state ────────────────────────────────────────────────────
+        # Shared State
         user_id       = gr.State("")
         user_role     = gr.State("viewer")
         session_token = gr.Textbox(visible=False, value="", elem_id="fg-session-token")
 
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
         # LOGIN + SIGNUP VIEW
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
         with gr.Group(visible=True, elem_classes=["login-bg"]) as login_view:
             with gr.Row():
                 gr.Column(scale=1)
                 with gr.Column(scale=1):
                     gr.HTML("<div style='height:8vh;'></div>")
 
-                    # ── Mode toggle (Login / Sign Up) ────────────────────────
+                    # Mode Toggle (Login / Sign Up)
                     with gr.Row():
                         mode_login_btn  = gr.Button("Sign In",  elem_classes=["glass-btn"])
                         mode_signup_btn = gr.Button("Request Access", elem_classes=["glass-btn"])
 
-                    # ── LOGIN CARD ───────────────────────────────────────────
+                    # Login Card UI
                     with gr.Group(visible=True, elem_classes=["glass-card","shimmer-border"]) as login_card:
                         gr.HTML(f"""
                         <div style='text-align:center;margin-bottom:28px;'>
@@ -103,7 +103,7 @@ def create_app():
                             Don't have access? Click <b>Request Access</b> above to apply.
                         </div>""")
 
-                    # ── SIGNUP CARD ──────────────────────────────────────────
+                    # Signup Card UI
                     with gr.Group(visible=False, elem_classes=["glass-card","shimmer-border"]) as signup_card:
                         gr.HTML(f"""
                         <div style='text-align:center;margin-bottom:28px;'>
@@ -138,16 +138,16 @@ def create_app():
 
                 gr.Column(scale=1)
 
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
         # ROLE DASHBOARDS (hidden until login)
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
         viewer_dash,  viewer_logout  = create_viewer_dashboard(app,  user_id)[:2]
         analyst_dash, analyst_logout = create_analyst_dashboard(app, user_id)[:2]
         admin_dash,   admin_logout   = create_admin_dashboard(app,   user_id)[:2]
 
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
         # EVENT HANDLERS
-        # ════════════════════════════════════════════════════════════════════
+        # ====================================================================
 
         # Toggle between login and signup card
         mode_login_btn.click(
@@ -159,7 +159,7 @@ def create_app():
             outputs=[login_card, signup_card]
         )
 
-        # ── Login ────────────────────────────────────────────────────────────
+        # Login Handlers
         def perform_login(email, password):
             from flagguard.core.db import SessionLocal
             from flagguard.core.models.tables import User
@@ -222,7 +222,7 @@ def create_app():
             js="(token) => { if(token) document.cookie='fg_session='+token+';path=/;max-age=3600;SameSite=Lax'; }"
         )
 
-        # ── Signup Request ───────────────────────────────────────────────────
+        # Signup Request Handlers
         def perform_signup(name, email, pw, pw2, role, reason):
             if not name or not email or not pw:
                 return "<div style='color:#ef4444;'>All fields required.</div>"
@@ -264,7 +264,7 @@ def create_app():
             outputs=[signup_msg]
         )
 
-        # ── Check Request Status ─────────────────────────────────────────────
+        # Check Request Status
         def check_request_status(email):
             if not email:
                 return ""
@@ -286,7 +286,7 @@ def create_app():
 
         check_btn.click(check_request_status, inputs=[check_email], outputs=[check_msg])
 
-        # ── Logout (all 3 dashboards share same logic) ────────────────────────
+        # Logout Handlers
         def do_logout():
             return ("",          # clear user_id state
                     "viewer",    # reset user_role state
@@ -301,7 +301,7 @@ def create_app():
                 js="() => { document.cookie='fg_session=;path=/;expires=Thu,01 Jan 1970 00:00:00 GMT'; }"
             )
 
-        # ── Session Restore (survives page refresh via JWT cookie) ────────────
+        # Session Restore via JWT Cookie
         def _restore_session(request: gr.Request):
             """Auto-restore user session from JWT cookie on page load."""
             try:
@@ -392,7 +392,7 @@ def launch():
     # Create the Gradio UI
     gradio_app = create_app()
 
-    # ── Mount Gradio onto FastAPI — SINGLE SERVER, SHARED COOKIES ────────
+    # Mount Gradio onto FastAPI (Single Server Shared Cookies)
     gr.mount_gradio_app(api_app, gradio_app, path="/")
 
     port = int(os.environ.get("PORT", 8000))

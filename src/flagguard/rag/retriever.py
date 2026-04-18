@@ -117,7 +117,7 @@ class HybridRetriever:
         """
         results: dict[str, RetrievalResult] = {}
 
-        # ── Strategy 1: Semantic Search (ChromaDB) ──
+        # Strategy 1: Semantic Search (ChromaDB)
         semantic_results = self._semantic_search(
             flag_names, conflict_description, top_k_semantic
         )
@@ -126,7 +126,7 @@ class HybridRetriever:
             r.source = "semantic"
             results[key] = r
 
-        # ── Strategy 2: Graph Traversal (NetworkX) ──
+        # Strategy 2: Graph Traversal (NetworkX)
         if self._graph and self._use_graph:
             graph_results = self._graph_search(flag_names, top_k_graph)
             for r in graph_results:
@@ -139,7 +139,7 @@ class HybridRetriever:
                     r.source = "graph"
                     results[key] = r
 
-        # ── Rank and Return ──
+        # Rank and Return
         ranked = sorted(
             results.values(),
             key=lambda r: (

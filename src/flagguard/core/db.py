@@ -81,7 +81,7 @@ def init_db() -> None:
     import flagguard.core.models.tables  # noqa — register all models
     Base.metadata.create_all(bind=engine)
 
-    # ── Migration: add project_code if missing ───────────────────────────
+    # Migration: add project_code if missing
     from sqlalchemy import inspect, text
     inspector = inspect(engine)
     if inspector.has_table("projects"):
