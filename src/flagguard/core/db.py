@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Laxmiranjan Sahu. All rights reserved.
+# Unauthorized copying of this file, via any medium, is strictly prohibited.
+# Proprietary and confidential.
+
 """Database configuration and session management.
 
 Handles setting up the SQLAlchemy engine and session factory.

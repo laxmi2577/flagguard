@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Laxmiranjan Sahu. All rights reserved.
+# Unauthorized copying of this file, via any medium, is strictly prohibited.
+# Proprietary and confidential.
+
 """Agentic Remediation Loop for FlagGuard GraphRAG.
 
 Implements a multi-agent system that generates mathematically verified

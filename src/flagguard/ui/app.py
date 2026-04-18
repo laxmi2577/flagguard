@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Laxmiranjan Sahu. All rights reserved.
+# Unauthorized copying of this file, via any medium, is strictly prohibited.
+# Proprietary and confidential.
+
 """FlagGuard — Role-Based UI Router.
 
 Handles login, signup request, and routes users to the correct
