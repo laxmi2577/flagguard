@@ -15,7 +15,7 @@
 </p>
 
 [![PyPI](https://img.shields.io/pypi/v/flagguard?color=blue&style=for-the-badge)](https://pypi.org/project/flagguard/)
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge)](https://github.com/laxmi2577/flagguard/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -452,7 +452,7 @@ Let's connect:
 
 ## 🛡️ License & Project Governance
 
-FlagGuard is protected by a **Proprietary License** — see the [LICENSE](LICENSE) file for details.
+FlagGuard is Open Source and released under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 *   Need architectural support? Read our [Support Guidelines](SUPPORT.md).
 *   Have a zero-day vulnerability to report? Read our secure [Security Policy](SECURITY.md).
